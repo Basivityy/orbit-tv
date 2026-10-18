@@ -88,7 +88,7 @@ class _EpgScreenState extends State<EpgScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final width = 24 * 60 * _pxPerMin;
+    const width = 24 * 60 * _pxPerMin;
     return ListenableBuilder(
       listenable: Listenable.merge([s.prefs, s.catalog]),
       builder: (context, _) {

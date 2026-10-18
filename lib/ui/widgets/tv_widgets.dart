@@ -84,7 +84,7 @@ class ProgramCard extends StatelessWidget {
               if (p != null && !live && p.isPastAt(now) && channel.hasArchive)
                 const Positioned(right: 10, top: 10, child: Pill('ARHIVA', icon: Icons.history_rounded, color: OrbitColors.cyan)),
               if (live)
-                Positioned(left: 0, right: 0, bottom: 0, child: ProgressLine(p!.progressAt(now), height: 4, background: Colors.black54)),
+                Positioned(left: 0, right: 0, bottom: 0, child: ProgressLine(p.progressAt(now), height: 4, background: Colors.black54)),
             ]),
           ),
           Padding(
