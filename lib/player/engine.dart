@@ -88,6 +88,7 @@ class PlayerEngine extends ChangeNotifier {
   Duration _lastPos = Duration.zero;
   DateTime _lastPosChange = DateTime.now();
   DateTime? _bufferingSince;
+  DateTime? _openedAt;
   DateTime _lastNotify = DateTime.fromMillisecondsSinceEpoch(0);
   Timer? _watchdog;
   Timer? _capture;
@@ -118,7 +119,6 @@ class PlayerEngine extends ChangeNotifier {
       player.stream.completed.listen((done) {
         if (done) _onCompleted();
       }),
-      player.stream.error.listen(_onError),
       player.stream.tracks.listen((_) => _notify(force: true)),
       player.stream.track.listen((_) => _notify(force: true)),
       player.stream.duration.listen((d) {
@@ -130,7 +130,7 @@ class PlayerEngine extends ChangeNotifier {
         _notify();
       }),
       player.stream.width.listen((_) => _notify(force: true)),
-      player.stream.log.listen((l) => Log.i('[mpv ${l.level}] ${l.prefix}: ${l.text.trim()}')),
+      player.stream.log.listen(_onLog),
     ]);
     await _observeCache();
     _watchdog = Timer.periodic(const Duration(seconds: 2), (_) => _tick());
@@ -281,6 +281,7 @@ class PlayerEngine extends ChangeNotifier {
     _pendingSeekUntil = DateTime.now().add(const Duration(seconds: 12));
     _pausedAt = null;
     _userPaused = false;
+    _openedAt = DateTime.now();
     _notify(force: true);
     Log.i('open ${k.name} $url${skip != null ? ' skip=${skip.inSeconds}s' : ''}');
     try {
@@ -665,16 +666,39 @@ class PlayerEngine extends ChangeNotifier {
     _notify(force: true);
   }
 
-  void _onError(String msg) {
-    if (kind == null) return;
-    Log.i('player error: $msg');
-    // mpv reports many recoverable glitches as errors; only act when playback is stuck (watchdog)
-    // or nothing is playing yet.
-    if (connecting) _scheduleReconnect('Stream se ne učitava.');
+  String _lastLog = '';
+  int _lastLogRepeats = 0;
+
+  /// mpv log (warnings and errors). Most "errors" are harmless (hardware decoder probing, no audio
+  /// device, a damaged frame when joining a live stream mid-GOP) — only a failed *open* of the
+  /// stream reconnects at once; everything else is left to the watchdog.
+  void _onLog(PlayerLog l) {
+    final text = l.text.trim();
+    final key = '${l.prefix}|$text';
+    final decoderNoise = l.prefix.startsWith('ffmpeg/video') || l.prefix.startsWith('ffmpeg/audio');
+    if (key == _lastLog || decoderNoise) {
+      _lastLogRepeats++;
+    } else {
+      if (_lastLogRepeats > 0) Log.i('[mpv] … $_lastLogRepeats similar/decoder messages');
+      _lastLogRepeats = 0;
+      _lastLog = key;
+      Log.i('[mpv ${l.level}] ${l.prefix}: $text');
+    }
+    if (kind == null || !connecting) return;
+    if (l.level != 'error' && l.level != 'fatal') return;
+    final openFailed = l.prefix == 'stream' ||
+        (l.prefix == 'ffmpeg' && RegExp(r'^(tcp|http|https|tls)\b').hasMatch(text)) ||
+        (l.prefix == 'cplayer' && text.contains('recognize file format'));
+    if (openFailed) _scheduleReconnect('Stream se ne učitava.');
   }
+
+  int _reconnectForSeq = -1;
 
   void _scheduleReconnect(String why) {
     if (kind == null) return;
+    // One retry per opened stream (several errors of one failed open count once).
+    if (_reconnectForSeq == _seq && (_reconnect?.isActive ?? false)) return;
+    _reconnectForSeq = _seq;
     _reconnect?.cancel();
     _failures++;
     Log.i('reconnect #$_failures: $why');
@@ -732,6 +756,13 @@ class PlayerEngine extends ChangeNotifier {
     if (!connecting && st.playing && !st.buffering && t.difference(_lastPosChange) > const Duration(seconds: 12)) {
       _scheduleReconnect('Slika je stala.');
       return;
+    }
+    // Opening failed and mpv went idle (e.g. HTTP 403/404, server closed at once) → retry soon.
+    if (connecting && _openedAt != null && t.difference(_openedAt!) > const Duration(milliseconds: 2500)) {
+      final seq = _seq;
+      mpvGet(player, 'idle-active').then((v) {
+        if (seq == _seq && connecting && v == 'yes') _scheduleReconnect('Stream se ne učitava.');
+      });
     }
     // Buffering/connecting forever → reconnect.
     final since = _bufferingSince;

@@ -30,6 +30,8 @@ Future<void> configureMpvForIptv(Player p, {required int bufferMb, bool preview 
   await mpvSet(p, 'user-agent', AppConfig.userAgent);
   await mpvSet(p, 'network-timeout', preview ? '10' : '20');
   await mpvSet(p, 'cache', 'yes');
+  // RAM cache only (the on-disk cache folder can't always be created; RAM is faster anyway).
+  await mpvSet(p, 'cache-on-disk', 'no');
   await mpvSet(p, 'demuxer-max-bytes', '${preview ? 8 : mb}MiB');
   await mpvSet(p, 'demuxer-max-back-bytes', '${preview ? 2 : mb}MiB');
   await mpvSet(p, 'demuxer-seekable-cache', 'yes');
@@ -38,7 +40,6 @@ Future<void> configureMpvForIptv(Player p, {required int bufferMb, bool preview 
   await mpvSet(p, 'demuxer-lavf-analyzeduration', '2');
   await mpvSet(p, 'stream-lavf-o', 'reconnect=1,reconnect_streamed=1,reconnect_on_network_error=1,reconnect_delay_max=4');
   await mpvSet(p, 'hls-bitrate', 'max');
-  await mpvSet(p, 'keep-open', 'no');
   await mpvSet(p, 'sub-auto', 'no');
   await mpvSet(p, 'audio-display', 'no');
   await mpvSet(p, 'deinterlace', 'no');

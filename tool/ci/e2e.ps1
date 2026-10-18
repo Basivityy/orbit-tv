@@ -85,8 +85,11 @@ Shot "09-channel-drawer"
 Keys "{DOWN}" 300; Keys "{DOWN}" 300; Keys "{ENTER}" 12000
 Keys "{SCROLLLOCK}" 800
 Shot "10-zap-interlaced"
+Keys "3" 12000
+Keys "{SCROLLLOCK}" 800
+Shot "11-number-3-interlaced"
 Keys "{UP}" 9000
-Shot "11-zap-up"
+Shot "11b-zap-up"
 Keys "a" 1200
 Shot "12-tracks"
 Keys "{ESC}" 600
