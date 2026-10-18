@@ -14,6 +14,7 @@ import '../media/frame_grabber.dart';
 import '../media/frames.dart';
 import '../media/thumbs.dart';
 import '../player/engine.dart';
+import '../util/log.dart';
 
 /// App-wide services (one signed-in account at a time).
 class AppServices extends ChangeNotifier {
@@ -62,11 +63,14 @@ class AppServices extends ChangeNotifier {
   Future<void> signIn(Account account, {void Function(String)? progress}) async {
     await signOut(keepAccount: true);
     progress?.call('Povezujem se sa serverom…');
+    Log.i('sign in ${account.server}${account.loginCode != null ? ' (code)' : ''}');
     final api = XtreamClient(account);
-    await api.authenticate();
+    final info = await api.authenticate();
+    Log.i('account ${info.status}, max connections ${info.maxConnections}, server clock offset ${api.clock.offset.inMinutes} min');
     progress?.call('Učitavam kanale…');
     final catalog = Catalog(api);
     await catalog.loadLive();
+    Log.i('${catalog.channels.length} channels in ${catalog.liveCategories.length} categories');
     final epg = EpgRepository(api);
     _api = api;
     _catalog = catalog;

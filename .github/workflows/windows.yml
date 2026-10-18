@@ -64,6 +64,32 @@ jobs:
           set -o pipefail
           flutter build windows --release --build-name=${{ env.APP_VERSION }} --build-number=${{ github.run_number }} 2>&1 | tee ci-logs/4-build.txt
 
+      # End-to-end check: fake Xtream server + the real app driven by keyboard/mouse;
+      # screenshots and logs end up on the ci-logs branch. Never blocks the release build.
+      - name: E2E - test media
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) { choco install ffmpeg -y --no-progress | Out-Null }
+          New-Item -ItemType Directory -Force ci-media | Out-Null
+          ffmpeg -hide_banner -loglevel error -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 300 -c:v libx264 -preset veryfast -b:v 1500k -g 50 -pix_fmt yuv420p -c:a aac -b:a 96k -f mpegts ci-media\test_progressive.ts
+          ffmpeg -hide_banner -loglevel error -f lavfi -i "testsrc=size=720x576:rate=50" -f lavfi -i "sine=frequency=660:sample_rate=48000" -t 300 -vf "tinterlace=mode=interleave_top,setfield=tff" -c:v libx264 -preset veryfast -b:v 1200k -flags +ilme+ildct -x264-params "interlaced=1:tff=1" -g 50 -pix_fmt yuv420p -c:a aac -b:a 96k -f mpegts ci-media\test_interlaced.ts
+          Copy-Item installer\app_icon.png ci-media\logo.png
+          Get-ChildItem ci-media | Format-Table Name, Length
+
+      - name: E2E - run the app
+        continue-on-error: true
+        timeout-minutes: 12
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ci-logs | Out-Null
+          $srv = Start-Process python -ArgumentList "tool\ci\fake_xtream.py","ci-media","8899" -PassThru -RedirectStandardError ci-logs\fake-server.txt -RedirectStandardOutput ci-logs\fake-server-out.txt
+          Start-Sleep -Seconds 2
+          & .\tool\ci\e2e.ps1
+          Stop-Process -Id $srv.Id -Force -ErrorAction SilentlyContinue
+          $log = Join-Path $env:APPDATA "Orbitex FZE LLC\Orbit TV\orbit_tv.log"
+          if (Test-Path $log) { Copy-Item $log ci-logs\app-log.txt }
+
       - name: Bundle VC++ runtime (app-local, so it runs on clean PCs)
         shell: pwsh
         run: |

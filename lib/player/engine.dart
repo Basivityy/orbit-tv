@@ -13,6 +13,7 @@ import '../media/frames.dart';
 import '../media/mpv.dart';
 import '../data/server_clock.dart';
 import '../util/debouncer.dart';
+import '../util/log.dart';
 import 'timeline.dart';
 
 enum PlayKind { live, archive, vod, episode }
@@ -129,6 +130,7 @@ class PlayerEngine extends ChangeNotifier {
         _notify();
       }),
       player.stream.width.listen((_) => _notify(force: true)),
+      player.stream.log.listen((l) => Log.i('[mpv ${l.level}] ${l.prefix}: ${l.text.trim()}')),
     ]);
     await _observeCache();
     _watchdog = Timer.periodic(const Duration(seconds: 2), (_) => _tick());
@@ -178,11 +180,13 @@ class PlayerEngine extends ChangeNotifier {
       _progressiveReads = 0;
       if (!_deintOn) {
         _deintOn = true;
+        Log.i('interlaced video → deinterlace on');
         await mpvSet(player, 'deinterlace', 'yes');
       }
     } else if (_deintOn && ++_progressiveReads >= 5) {
       _deintOn = false;
       _progressiveReads = 0;
+      Log.i('progressive video → deinterlace off');
       await mpvSet(player, 'deinterlace', 'no');
     }
   }
@@ -278,12 +282,14 @@ class PlayerEngine extends ChangeNotifier {
     _pausedAt = null;
     _userPaused = false;
     _notify(force: true);
+    Log.i('open ${k.name} $url${skip != null ? ' skip=${skip.inSeconds}s' : ''}');
     try {
       await host.beforeOpen();
       if (seq != _seq) return;
       await player.open(Media(url, httpHeaders: const {'User-Agent': AppConfig.userAgent}), play: true);
     } catch (e) {
       if (seq != _seq) return;
+      Log.i('open failed: $e');
       _scheduleReconnect('Ne mogu otvoriti stream.');
     }
   }
@@ -369,6 +375,7 @@ class PlayerEngine extends ChangeNotifier {
   }
 
   void _execute(Channel c, SeekPlan plan) {
+    Log.i('plan ${plan.runtimeType} on ${c.name}');
     switch (plan) {
       case StayLive():
         if (!player.state.playing) player.play();
@@ -628,6 +635,7 @@ class PlayerEngine extends ChangeNotifier {
   }
 
   void _onCompleted() {
+    Log.i('completed (${kind?.name})');
     final c = channel;
     if (c != null && isTv) {
       if (kind == PlayKind.live) {
@@ -659,7 +667,7 @@ class PlayerEngine extends ChangeNotifier {
 
   void _onError(String msg) {
     if (kind == null) return;
-    debugPrint('[player] $msg');
+    Log.i('player error: $msg');
     // mpv reports many recoverable glitches as errors; only act when playback is stuck (watchdog)
     // or nothing is playing yet.
     if (connecting) _scheduleReconnect('Stream se ne učitava.');
@@ -669,6 +677,7 @@ class PlayerEngine extends ChangeNotifier {
     if (kind == null) return;
     _reconnect?.cancel();
     _failures++;
+    Log.i('reconnect #$_failures: $why');
     if (_failures > 6) {
       connecting = false;
       error = '$why Provjeri internet ili pokušaj drugi kanal.';

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -7,14 +8,21 @@ import 'app/config.dart';
 import 'app/services.dart';
 import 'app/theme.dart';
 import 'ui/gate.dart';
+import 'util/log.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+  unawaited(Log.init());
+  Log.i('${AppConfig.appName} ${AppConfig.version} starting');
   // Never let a stray async error close the app.
   PlatformDispatcher.instance.onError = (e, st) {
-    debugPrint('Uncaught: $e\n$st');
+    Log.i('Uncaught: $e\n$st');
     return true;
+  };
+  FlutterError.onError = (details) {
+    Log.i('Flutter: ${details.exceptionAsString()}\n${details.stack ?? ''}');
+    FlutterError.presentError(details);
   };
   await AppServices.I.boot();
   runApp(const OrbitApp());
