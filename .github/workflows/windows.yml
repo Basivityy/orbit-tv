@@ -16,7 +16,8 @@ concurrency:
 
 jobs:
   windows:
-    runs-on: windows-latest
+    # Flutter 3.27 knows Visual Studio 2019/2022 (windows-2022 image).
+    runs-on: windows-2022
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
