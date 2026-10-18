@@ -1,0 +1,18 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # Real problems fail the CI build; style hints do not.
+    unused_import: warning
+    dead_code: info
+  exclude:
+    - build/**
+    - windows/**
+
+linter:
+  rules:
+    avoid_print: false
+    prefer_const_constructors: false
+    prefer_const_literals_to_create_immutables: false
+    use_build_context_synchronously: false
+    library_private_types_in_public_api: false
