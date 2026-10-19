@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,6 +23,7 @@ class FocusTile extends StatefulWidget {
     this.padding = EdgeInsets.zero,
     this.color,
     this.selected = false,
+    this.focusColor = OrbitColors.accent,
   });
   final Widget child;
   final VoidCallback? onTap;
@@ -34,6 +36,7 @@ class FocusTile extends StatefulWidget {
   final EdgeInsets padding;
   final Color? color;
   final bool selected;
+  final Color focusColor;
 
   @override
   State<FocusTile> createState() => _FocusTileState();
@@ -84,10 +87,10 @@ class _FocusTileState extends State<FocusTile> {
               color: widget.color,
               borderRadius: BorderRadius.circular(widget.radius),
               border: Border.all(
-                color: _focus ? OrbitColors.cyan : (widget.selected ? OrbitColors.violet : (_hover ? Colors.white.o(0.22) : Colors.transparent)),
-                width: _focus ? 2.5 : 1.5,
+                color: _focus ? widget.focusColor : (widget.selected ? OrbitColors.accent.o(0.85) : (_hover ? Colors.white.o(0.28) : Colors.transparent)),
+                width: _focus ? 3 : 2,
               ),
-              boxShadow: active ? [BoxShadow(color: OrbitColors.violet.o(0.35), blurRadius: 24, spreadRadius: -4)] : const [],
+              boxShadow: active ? [BoxShadow(color: Colors.black.o(0.55), blurRadius: 26, offset: const Offset(0, 10))] : const [],
             ),
             child: ClipRRect(borderRadius: BorderRadius.circular(widget.radius - 1), child: widget.child),
           ),
@@ -121,7 +124,7 @@ class NetImage extends StatelessWidget {
       cacheWidth: cacheWidth,
       gaplessPlayback: true,
       filterQuality: FilterQuality.medium,
-      headers: const {'User-Agent': 'OrbitTV/1.0 (Windows)'},
+      headers: const {'User-Agent': 'OrbitPlayer/1.0 (Windows)'},
       frameBuilder: (context, child, frame, sync) {
         if (sync || frame != null) {
           return AnimatedOpacity(opacity: 1, duration: const Duration(milliseconds: 250), child: child);
@@ -195,9 +198,13 @@ class LiveBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: small ? 6 : 8, vertical: small ? 2 : 3),
+      padding: EdgeInsets.symmetric(horizontal: small ? 7 : 9, vertical: small ? 3 : 4),
       decoration: BoxDecoration(color: OrbitColors.live, borderRadius: BorderRadius.circular(6)),
-      child: Text(label, style: TextStyle(fontSize: small ? 9.5 : 11, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: Colors.white)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: small ? 5 : 6, height: small ? 5 : 6, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+        SizedBox(width: small ? 4 : 5),
+        Text(label, style: TextStyle(fontSize: small ? 9.5 : 11, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: Colors.white, height: 1.1)),
+      ]),
     );
   }
 }
@@ -282,7 +289,7 @@ class LoadingView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const SizedBox(width: 34, height: 34, child: CircularProgressIndicator(strokeWidth: 3, color: OrbitColors.cyan)),
+        const SizedBox(width: 34, height: 34, child: CircularProgressIndicator(strokeWidth: 3, color: OrbitColors.accent)),
         if (message != null) ...[const SizedBox(height: 16), Text(message!, style: TextStyles.muted)],
       ]),
     );
@@ -332,7 +339,13 @@ class SectionRow extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: Gap.page),
-          child: Row(children: [Text(title, style: TextStyles.h2), const Spacer(), if (trailing != null) trailing!]),
+          child: Row(children: [
+            Container(width: 4, height: 20, decoration: BoxDecoration(color: OrbitColors.accent, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(width: 12),
+            Text(title, style: TextStyles.h2),
+            const Spacer(),
+            if (trailing != null) trailing!,
+          ]),
         ),
         const SizedBox(height: 14),
         SizedBox(
@@ -360,18 +373,79 @@ class PageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.page, 30, Gap.page, 18),
+      padding: const EdgeInsets.fromLTRB(Gap.page, 26, Gap.page, 18),
       child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(title, style: TextStyles.h1),
-            if (subtitle != null) ...[const SizedBox(height: 4), Text(subtitle!, style: TextStyles.muted)],
+            if (subtitle != null) ...[const SizedBox(height: 5), Text(subtitle!, style: TextStyles.muted)],
           ]),
         ),
         ...actions,
-        const SizedBox(width: 18),
-        const ClockText(style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: OrbitColors.textMuted)),
       ]),
+    );
+  }
+}
+
+
+/// Frosted dark panel (player bars, drawers).
+class GlassPanel extends StatelessWidget {
+  const GlassPanel({super.key, required this.child, this.radius = 0, this.opacity = 0.62, this.padding = EdgeInsets.zero, this.border = true});
+  final Widget child;
+  final double radius;
+  final double opacity;
+  final EdgeInsets padding;
+  final bool border;
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A0A09).o(opacity),
+            borderRadius: BorderRadius.circular(radius),
+            border: border ? Border.all(color: Colors.white.o(0.07)) : null,
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// Horizontal category chips (EON style): "Svi", "Omiljeni", categories…
+class ChipBar extends StatelessWidget {
+  const ChipBar({super.key, required this.items, required this.selected, required this.onSelect, this.padding = const EdgeInsets.symmetric(horizontal: Gap.page)});
+  final List<(String, String)> items; // (id, label)
+  final String selected;
+  final ValueChanged<String> onSelect;
+  final EdgeInsets padding;
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 46,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: padding,
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final (id, label) = items[i];
+          final on = id == selected;
+          return FocusTile(
+            onTap: () => onSelect(id),
+            scale: 1.0,
+            radius: 23,
+            color: on ? OrbitColors.accent : OrbitColors.surfaceHigh,
+            focusColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            child: Text(label, style: TextStyle(fontSize: 14, fontWeight: on ? FontWeight.w800 : FontWeight.w600, color: on ? OrbitColors.onAccent : OrbitColors.text)),
+          );
+        },
+      ),
     );
   }
 }

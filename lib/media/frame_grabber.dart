@@ -9,10 +9,11 @@ import 'frames.dart';
 import 'mpv.dart';
 
 class _Job {
-  _Job(this.url, this.seek, this.done);
+  _Job(this.url, this.seek, this.done, this.large);
   final String url;
   final Duration seek;
   final Completer<ui.Image?> done;
+  final bool large;
 }
 
 /// A second, muted mpv instance that opens a stream for a moment and takes one frame.
@@ -44,10 +45,10 @@ class FrameGrabber {
   }
 
   /// Queues a frame grab. Newest requests are served first; old ones are dropped when many wait.
-  Future<ui.Image?> grab(String url, {Duration seek = Duration.zero}) {
+  Future<ui.Image?> grab(String url, {Duration seek = Duration.zero, bool large = false}) {
     if (!allowed()) return Future.value(null);
     final c = Completer<ui.Image?>();
-    _queue.add(_Job(url, seek, c));
+    _queue.add(_Job(url, seek, c, large));
     while (_queue.length > 6) {
       _queue.removeAt(0).done.complete(null);
     }
@@ -102,8 +103,10 @@ class FrameGrabber {
         if (w > 1 && h > 1) {
           final raw = await p.screenshot(format: null);
           if (raw != null) {
-            final rgba = downscaleBgra(raw, w, h);
-            if (rgba != null && !isBlankRgba(rgba)) return rgbaToImage(rgba);
+            final ow = job.large ? kLargeW : kThumbW;
+            final oh = job.large ? kLargeH : kThumbH;
+            final rgba = downscaleBgra(raw, w, h, outW: ow, outH: oh);
+            if (rgba != null && !isBlankRgba(rgba)) return rgbaToImage(rgba, w: ow, h: oh);
           }
         }
         await Future<void>.delayed(const Duration(milliseconds: 500));

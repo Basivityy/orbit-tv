@@ -3,11 +3,11 @@ import math
 import sys
 from PIL import Image, ImageDraw, ImageFilter
 
-VIOLET = (124, 92, 255)
-CYAN = (34, 211, 238)
+VIOLET = (255, 225, 77)
+CYAN = (255, 196, 0)
 WHITE = (242, 243, 250)
-BG_TOP = (20, 23, 43)
-BG_BOTTOM = (7, 8, 15)
+BG_TOP = (28, 28, 26)
+BG_BOTTOM = (5, 5, 5)
 
 
 def lerp(a, b, t):

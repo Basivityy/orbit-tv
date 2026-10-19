@@ -11,13 +11,15 @@ import '../app/services.dart';
 import '../app/theme.dart';
 import '../data/models.dart';
 import '../ui/widgets/common.dart';
+import '../ui/widgets/tv_widgets.dart';
 import '../util/time_fmt.dart';
 import 'engine.dart';
 import 'timeline.dart';
 import 'widgets/seek_bar.dart';
 
-/// Full-window player with EON-style controls: programme timeline with live edge, start-over,
-/// rewind of a programme that is still running, skip with frame previews, channel list.
+/// Full-window player (EON style): info bar with the programme timeline and live edge,
+/// start-over, rewinding a programme that is still running with frame previews,
+/// the channel's mini guide (earlier/now/later with pictures) and the channel list.
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
   static bool isOpen = false;
@@ -25,14 +27,15 @@ class PlayerScreen extends StatefulWidget {
   State<PlayerScreen> createState() => _PlayerScreenState();
 }
 
+enum _Panel { none, channels, guide, tracks }
+
 class _PlayerScreenState extends State<PlayerScreen> {
   final s = AppServices.I;
   PlayerEngine get e => s.engine;
   final _focus = FocusNode(debugLabel: 'player');
   DateTime _osdUntil = DateTime.now().add(const Duration(seconds: 5));
   Timer? _osdTimer;
-  bool _drawer = false;
-  bool _tracks = false;
+  _Panel _panel = _Panel.none;
   bool _fullscreen = false;
   bool _mouseScrub = false;
   bool _lastOsd = true;
@@ -46,7 +49,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   int _drawerIndex = 0;
   final _drawerScroll = ScrollController();
-  static const _drawerItemH = 72.0;
+  static const _drawerItemH = 74.0;
+
+  int _guideIndex = 0;
+  final _guideScroll = ScrollController();
+  static const _guideCardW = 268.0;
+  static const _guideGap = 14.0;
 
   BoxFit _fit = BoxFit.contain;
   String _aspect = 'auto';
@@ -69,13 +77,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _scrubCommit?.cancel();
     _digitsTimer?.cancel();
     _drawerScroll.dispose();
+    _guideScroll.dispose();
     _focus.dispose();
     if (_fullscreen) defaultExitNativeFullscreen();
     if (s.signedIn) s.engine.stop();
     super.dispose();
   }
 
-  bool get _osdVisible => _drawer || _tracks || _mouseScrub || _scrubMs != null || !e.playing || DateTime.now().isBefore(_osdUntil);
+  bool get _osdVisible => _panel != _Panel.none || _mouseScrub || _scrubMs != null || !e.playing || DateTime.now().isBefore(_osdUntil);
 
   void _poke([int seconds = 4]) {
     _osdUntil = DateTime.now().add(Duration(seconds: seconds));
@@ -91,12 +100,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (mounted) setState(() => _fullscreen = !_fullscreen);
   }
 
+  void _setPanel(_Panel p) {
+    setState(() => _panel = _panel == p ? _Panel.none : p);
+    if (_panel == _Panel.channels) _prepareDrawer();
+    if (_panel == _Panel.guide) _prepareGuide();
+    _focus.requestFocus();
+  }
+
   void _close() {
-    if (_drawer || _tracks) {
-      setState(() {
-        _drawer = false;
-        _tracks = false;
-      });
+    if (_panel != _Panel.none) {
+      setState(() => _panel = _Panel.none);
       return;
     }
     if (_fullscreen) {
@@ -174,14 +187,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   List<Channel> get _list => e.zapList.isNotEmpty ? e.zapList : s.catalog.channels;
 
-  void _openDrawer() {
+  void _prepareDrawer() {
     final list = _list;
     final i = e.channel == null ? 0 : list.indexWhere((c) => c.id == e.channel!.id);
-    setState(() {
-      _drawer = true;
-      _tracks = false;
-      _drawerIndex = i < 0 ? 0 : i;
-    });
+    _drawerIndex = i < 0 ? 0 : i;
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollDrawer(jump: true));
     s.epg.prefetchNow(list.skip((_drawerIndex - 6).clamp(0, list.length)).take(16));
   }
@@ -206,8 +215,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   void _playFromDrawer(Channel c) {
     e.playChannel(c, list: _list, immediate: true);
-    setState(() => _drawer = false);
-    _poke();
+    setState(() => _panel = _Panel.none);
+    _poke(5);
+  }
+
+  void _zap(int step) {
+    e.zap(step);
+    _poke(5);
   }
 
   void _digit(int d) {
@@ -224,8 +238,72 @@ class _PlayerScreenState extends State<PlayerScreen> {
         return;
       }
       e.playChannel(c, list: _list.any((x) => x.id == c.id) ? _list : s.catalog.channels, immediate: true);
-      _poke();
+      _poke(5);
     });
+  }
+
+  // ------------------------------------------------------------------ mini guide
+
+  List<Program> _guidePrograms() {
+    final c = e.channel;
+    if (c == null) return const [];
+    final now = e.now;
+    final from = c.archiveStart(now) ?? now.subtract(const Duration(hours: 3));
+    return s.epg.programs(c.id).where((p) => p.end.isAfter(from) && p.start.isBefore(now.add(const Duration(hours: 30)))).toList();
+  }
+
+  void _prepareGuide() {
+    final c = e.channel;
+    if (c == null) return;
+    s.epg.ensureFull(c);
+    final list = _guidePrograms();
+    final head = e.playhead;
+    final i = list.indexWhere((p) => p.isLiveAt(head));
+    _guideIndex = i < 0 ? (list.isEmpty ? 0 : list.length - 1) : i;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollGuide(jump: true));
+  }
+
+  void _scrollGuide({bool jump = false}) {
+    if (!_guideScroll.hasClients) return;
+    final viewport = _guideScroll.position.viewportDimension;
+    final target = (_guideIndex * (_guideCardW + _guideGap) - (viewport - _guideCardW) / 2).clamp(0.0, _guideScroll.position.maxScrollExtent);
+    if (jump) {
+      _guideScroll.jumpTo(target);
+    } else {
+      _guideScroll.animateTo(target, duration: const Duration(milliseconds: 220), curve: Curves.easeOutCubic);
+    }
+  }
+
+  void _guideMove(int d) {
+    final list = _guidePrograms();
+    if (list.isEmpty) return;
+    setState(() => _guideIndex = (_guideIndex + d).clamp(0, list.length - 1));
+    _scrollGuide();
+  }
+
+  void _playFromGuide(Program p) {
+    final c = e.channel;
+    if (c == null) return;
+    final now = e.now;
+    if (p.start.isAfter(now)) {
+      e.showToast('Počinje ${TimeFmt.dayLabel(p.start).toLowerCase()} u ${TimeFmt.hm(p.start)}');
+      return;
+    }
+    if (p.isLiveAt(now)) {
+      final current = e.program;
+      if (current != null && current.key == p.key && !e.atLiveEdge) {
+        e.goLive();
+      } else if (current == null || current.key != p.key) {
+        e.goLive();
+      }
+    } else if (c.hasArchive) {
+      e.playArchive(c, p.start, list: _list);
+    } else {
+      e.showToast('Ovaj kanal nema arhivu.');
+      return;
+    }
+    setState(() => _panel = _Panel.none);
+    _poke(5);
   }
 
   // ------------------------------------------------------------------ keys
@@ -241,7 +319,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
       if (!repeat) _close();
       return KeyEventResult.handled;
     }
-    if (_drawer) {
+    final isEnter = k == LogicalKeyboardKey.enter || k == LogicalKeyboardKey.numpadEnter || k == LogicalKeyboardKey.select;
+    if (_panel == _Panel.channels) {
       if (k == LogicalKeyboardKey.arrowUp) {
         _drawerMove(-1);
       } else if (k == LogicalKeyboardKey.arrowDown) {
@@ -250,11 +329,24 @@ class _PlayerScreenState extends State<PlayerScreen> {
         _drawerMove(-8);
       } else if (k == LogicalKeyboardKey.pageDown) {
         _drawerMove(8);
-      } else if (k == LogicalKeyboardKey.enter || k == LogicalKeyboardKey.numpadEnter || k == LogicalKeyboardKey.select) {
+      } else if (isEnter) {
         final list = _list;
         if (list.isNotEmpty) _playFromDrawer(list[_drawerIndex.clamp(0, list.length - 1)]);
       } else if (k == LogicalKeyboardKey.arrowLeft || k == LogicalKeyboardKey.arrowRight) {
-        setState(() => _drawer = false);
+        setState(() => _panel = _Panel.none);
+      }
+      return KeyEventResult.handled;
+    }
+    if (_panel == _Panel.guide) {
+      if (k == LogicalKeyboardKey.arrowLeft) {
+        _guideMove(-1);
+      } else if (k == LogicalKeyboardKey.arrowRight) {
+        _guideMove(1);
+      } else if (isEnter) {
+        final list = _guidePrograms();
+        if (list.isNotEmpty) _playFromGuide(list[_guideIndex.clamp(0, list.length - 1)]);
+      } else if (k == LogicalKeyboardKey.arrowUp || k == LogicalKeyboardKey.arrowDown || k == LogicalKeyboardKey.keyG) {
+        setState(() => _panel = _Panel.none);
       }
       return KeyEventResult.handled;
     }
@@ -290,15 +382,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
     if (e.isTv) {
       if (k == LogicalKeyboardKey.arrowUp || k == LogicalKeyboardKey.pageUp || k == LogicalKeyboardKey.channelUp) {
-        e.zap(1);
+        _zap(1);
         return KeyEventResult.handled;
       }
       if (k == LogicalKeyboardKey.arrowDown || k == LogicalKeyboardKey.pageDown || k == LogicalKeyboardKey.channelDown) {
-        e.zap(-1);
+        _zap(-1);
         return KeyEventResult.handled;
       }
-      if (k == LogicalKeyboardKey.enter || k == LogicalKeyboardKey.numpadEnter || k == LogicalKeyboardKey.select || k == LogicalKeyboardKey.keyL) {
-        if (!repeat) _openDrawer();
+      if (isEnter || k == LogicalKeyboardKey.keyL) {
+        if (!repeat) _setPanel(_Panel.channels);
+        return KeyEventResult.handled;
+      }
+      if (k == LogicalKeyboardKey.keyG || k == LogicalKeyboardKey.tab) {
+        if (!repeat) _setPanel(_Panel.guide);
         return KeyEventResult.handled;
       }
       if (k == LogicalKeyboardKey.home) {
@@ -323,7 +419,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         e.setVolume(e.player.state.volume - 5);
         return KeyEventResult.handled;
       }
-      if (k == LogicalKeyboardKey.enter || k == LogicalKeyboardKey.numpadEnter || k == LogicalKeyboardKey.select) {
+      if (isEnter) {
         if (!repeat) e.togglePlay();
         return KeyEventResult.handled;
       }
@@ -345,7 +441,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       return KeyEventResult.handled;
     }
     if (k == LogicalKeyboardKey.keyA) {
-      if (!repeat) setState(() => _tracks = !_tracks);
+      if (!repeat) _setPanel(_Panel.tracks);
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -409,12 +505,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
           listenable: Listenable.merge([e, s.epg]),
           builder: (context, _) {
             final osd = _osdVisible;
+            final guideOpen = _panel == _Panel.guide;
             return MouseRegion(
               cursor: osd ? SystemMouseCursors.basic : SystemMouseCursors.none,
               onHover: (_) => _poke(),
               child: Listener(
                 onPointerSignal: (sig) {
-                  if (sig is PointerScrollEvent) {
+                  if (sig is PointerScrollEvent && _panel == _Panel.none) {
                     e.setVolume(e.player.state.volume + (sig.scrollDelta.dy < 0 ? 5 : -5));
                     _poke();
                   }
@@ -422,11 +519,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () {
-                    if (_drawer || _tracks) {
-                      setState(() {
-                        _drawer = false;
-                        _tracks = false;
-                      });
+                    if (_panel != _Panel.none) {
+                      setState(() => _panel = _Panel.none);
                     } else {
                       osd ? setState(() => _osdUntil = DateTime.now()) : _poke();
                     }
@@ -437,20 +531,29 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     Video(controller: e.video, controls: NoVideoControls, fit: _fit, fill: Colors.black, wakelock: true),
                     if (e.buffering && e.error == null) const Center(child: _Spinner()),
                     if (e.error != null) _errorOverlay(),
-                    // Top bar
                     Positioned(left: 0, right: 0, top: 0, child: _fade(osd, _topBar())),
-                    // Bottom panel
-                    Positioned(left: 0, right: 0, bottom: 0, child: _fade(osd, _bottomPanel())),
+                    Positioned(left: 0, right: 0, bottom: 0, child: _fade(osd && !guideOpen, _bottomPanel())),
+                    // Mini guide (programmes of this channel)
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 240),
+                      curve: Curves.easeOutCubic,
+                      left: 0,
+                      right: 0,
+                      bottom: guideOpen ? 0 : -360,
+                      height: 340,
+                      child: _guidePanel(),
+                    ),
                     if (e.visibleToast != null)
                       Positioned(
-                        top: 110,
+                        top: 120,
                         left: 0,
                         right: 0,
                         child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                            decoration: BoxDecoration(color: Colors.black.o(0.72), borderRadius: BorderRadius.circular(30)),
-                            child: Text(e.visibleToast!, style: const TextStyle(fontWeight: FontWeight.w600)),
+                          child: GlassPanel(
+                            radius: 30,
+                            opacity: 0.75,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                            child: Text(e.visibleToast!, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                           ),
                         ),
                       ),
@@ -459,29 +562,29 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         top: 40,
                         right: 50,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          decoration: BoxDecoration(color: Colors.black.o(0.75), borderRadius: BorderRadius.circular(14), border: Border.all(color: OrbitColors.cyan)),
-                          child: Text(_digits, style: const TextStyle(fontSize: 44, fontWeight: FontWeight.w800, letterSpacing: 4)),
+                          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                          decoration: BoxDecoration(color: Colors.black.o(0.8), borderRadius: BorderRadius.circular(14), border: Border.all(color: OrbitColors.accent, width: 2)),
+                          child: Text(_digits, style: const TextStyle(fontSize: 46, fontWeight: FontWeight.w900, letterSpacing: 4, color: OrbitColors.accent)),
                         ),
                       ),
-                    // Channel list drawer
+                    // Channel list
                     AnimatedPositioned(
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeOutCubic,
-                      left: _drawer ? 0 : -460,
+                      left: _panel == _Panel.channels ? 0 : -480,
                       top: 0,
                       bottom: 0,
-                      width: 440,
+                      width: 460,
                       child: _drawerPanel(),
                     ),
                     // Audio / subtitles / picture
                     AnimatedPositioned(
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeOutCubic,
-                      right: _tracks ? 0 : -400,
+                      right: _panel == _Panel.tracks ? 0 : -420,
                       top: 0,
                       bottom: 0,
-                      width: 380,
+                      width: 400,
                       child: _tracksPanel(),
                     ),
                   ]),
@@ -501,20 +604,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   Widget _errorOverlay() {
     return Container(
-      color: Colors.black.o(0.7),
+      color: Colors.black.o(0.72),
       child: Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.portable_wifi_off_rounded, size: 54, color: OrbitColors.textMuted),
+          const Icon(Icons.portable_wifi_off_rounded, size: 56, color: OrbitColors.accent),
           const SizedBox(height: 14),
           const Text('Program se ne može učitati', style: TextStyles.h2),
           const SizedBox(height: 8),
-          ConstrainedBox(constraints: const BoxConstraints(maxWidth: 460), child: Text(e.error ?? '', textAlign: TextAlign.center, style: TextStyles.muted)),
-          const SizedBox(height: 20),
+          ConstrainedBox(constraints: const BoxConstraints(maxWidth: 480), child: Text(e.error ?? '', textAlign: TextAlign.center, style: TextStyles.muted)),
+          const SizedBox(height: 22),
           Row(mainAxisSize: MainAxisSize.min, children: [
             ElevatedButton.icon(onPressed: e.retryAfterError, icon: const Icon(Icons.refresh_rounded), label: const Text('Pokušaj ponovo')),
             const SizedBox(width: 12),
-            if (e.isTv) OutlinedButton.icon(onPressed: _openDrawer, icon: const Icon(Icons.list_rounded), label: const Text('Drugi kanal')),
-            const SizedBox(width: 12),
+            if (e.isTv) ...[
+              OutlinedButton.icon(onPressed: () => _setPanel(_Panel.channels), icon: const Icon(Icons.list_rounded), label: const Text('Drugi kanal')),
+              const SizedBox(width: 12),
+            ],
             OutlinedButton(onPressed: () => Navigator.of(context).maybePop(), child: const Text('Nazad')),
           ]),
         ]),
@@ -522,34 +627,41 @@ class _PlayerScreenState extends State<PlayerScreen> {
     );
   }
 
-  Widget _topBar() {
-    final c = e.channel;
+  Widget _statusBadge() {
     final p = e.program;
     final now = e.now;
+    if (!e.isTv) return const SizedBox.shrink();
+    if (e.atLiveEdge) return const LiveBadge();
+    final archive = e.kind == PlayKind.archive && p != null && p.isPastAt(now);
     return Container(
-      padding: const EdgeInsets.fromLTRB(28, 22, 28, 60),
-      decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xCC000000), Color(0x00000000)])),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(color: OrbitColors.accent, borderRadius: BorderRadius.circular(6)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.history_rounded, size: 13, color: OrbitColors.onAccent),
+        const SizedBox(width: 5),
+        Text(archive ? 'ARHIVA' : '−${TimeFmt.clock(e.behindLive)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: OrbitColors.onAccent, letterSpacing: 0.6, fontFeatures: [ui.FontFeature.tabularFigures()])),
+      ]),
+    );
+  }
+
+  Widget _topBar() {
+    final c = e.channel;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(28, 22, 32, 70),
+      decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xD9000000), Color(0x00000000)])),
       child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
         _RoundButton(icon: Icons.arrow_back_rounded, tooltip: 'Nazad (Esc)', onTap: () => Navigator.of(context).maybePop()),
         const SizedBox(width: 18),
         if (e.isTv && c != null) ...[
-          ChannelLogo(name: c.name, url: c.logo, size: 56),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Text('${c.number}  ', style: const TextStyle(fontWeight: FontWeight.w800, color: OrbitColors.textMuted)),
-                Flexible(child: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: OrbitColors.textMuted))),
-                const SizedBox(width: 12),
-                if (e.atLiveEdge) const LiveBadge() else Pill(e.kind == PlayKind.archive && p != null && p.isPastAt(now) ? 'ARHIVA' : 'UNAZAD ${TimeFmt.clock(e.behindLive)}', icon: Icons.history_rounded, color: OrbitColors.cyan),
-              ]),
-              const SizedBox(height: 4),
-              Text(p?.title ?? 'Nema podataka o programu', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-              if (p != null) Text('${TimeFmt.dayLabel(p.start)} · ${TimeFmt.range(p.start, p.end)}', style: TextStyles.muted),
-            ]),
-          ),
+          LogoBadge(channel: c, size: 46),
+          const SizedBox(width: 14),
+          Text('${c.number}', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: OrbitColors.accent, fontFeatures: [ui.FontFeature.tabularFigures()])),
+          const SizedBox(width: 12),
+          Flexible(child: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800))),
+          const SizedBox(width: 14),
+          _statusBadge(),
         ] else
-          Expanded(
+          Flexible(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (e.kind == PlayKind.episode && e.series != null) Text(e.series!.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: OrbitColors.textMuted)),
               Text(
@@ -560,19 +672,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
               ),
             ]),
           ),
-        const SizedBox(width: 16),
-        const ClockText(style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+        const Spacer(),
+        const ClockText(style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, fontFeatures: [ui.FontFeature.tabularFigures()])),
       ]),
     );
   }
 
   Widget _bottomPanel() {
     final m = _model();
-    final now = e.now;
     final c = e.channel;
     final p = e.program;
     final playing = e.playing;
     final skip = s.prefs.settings.skipSeconds;
+    final next = (c != null && p != null) ? s.epg.nextOf(c.id, p) : null;
     String leftLabel = '', rightLabel = '', headLabel = '';
     if (m != null) {
       if (e.isTv) {
@@ -584,79 +696,105 @@ class _PlayerScreenState extends State<PlayerScreen> {
         rightLabel = m.endMs > 1 ? '-${TimeFmt.clock(Duration(milliseconds: m.endMs - (_scrubMs ?? m.positionMs)))}' : '';
       }
     }
+    const tab = [ui.FontFeature.tabularFigures()];
     return Container(
-      padding: const EdgeInsets.fromLTRB(36, 80, 36, 26),
-      decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x00000000), Color(0xE6000000)])),
+      padding: const EdgeInsets.fromLTRB(40, 90, 40, 26),
+      decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x00000000), Color(0xB3000000), Color(0xF2000000)], stops: [0, 0.4, 1])),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (e.isTv) ...[
+          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(p?.title ?? 'Nema podataka o programu', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+                const SizedBox(height: 4),
+                Text(p == null ? (c?.name ?? '') : '${TimeFmt.dayLabel(p.start)} · ${TimeFmt.range(p.start, p.end)} · ${TimeFmt.humanMinutes(p.duration)}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: OrbitColors.textMuted)),
+              ]),
+            ),
+            if (next != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 20),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  const Text('SLIJEDI', style: TextStyles.label),
+                  const SizedBox(height: 4),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 320),
+                    child: Text('${TimeFmt.hm(next.start)}  ${next.title}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                  ),
+                ]),
+              ),
+          ]),
+          const SizedBox(height: 14),
+        ],
         if (m != null) ...[
           Row(children: [
-            Text(leftLabel, style: const TextStyle(fontWeight: FontWeight.w700, fontFeatures: [ui.FontFeature.tabularFigures()])),
+            Text(leftLabel, style: const TextStyle(fontWeight: FontWeight.w700, fontFeatures: tab)),
             const Spacer(),
-            if (headLabel.isNotEmpty) Text(headLabel, style: const TextStyle(fontWeight: FontWeight.w700, color: OrbitColors.cyan, fontFeatures: [ui.FontFeature.tabularFigures()])),
+            if (headLabel.isNotEmpty) Text(headLabel, style: const TextStyle(fontWeight: FontWeight.w800, color: OrbitColors.accent, fontFeatures: tab)),
             const Spacer(),
-            Text(rightLabel, style: const TextStyle(fontWeight: FontWeight.w700, fontFeatures: [ui.FontFeature.tabularFigures()])),
+            Text(rightLabel, style: const TextStyle(fontWeight: FontWeight.w700, fontFeatures: tab)),
           ]),
           const SizedBox(height: 4),
-          SeekBar(
-            model: m,
-            scrubMs: _scrubMs,
-            onSeek: _seekMs,
-            onScrubbing: (v) => setState(() => _mouseScrub = v),
-            previewBuilder: _preview,
-          ),
-          const SizedBox(height: 10),
+          SeekBar(model: m, scrubMs: _scrubMs, onSeek: _seekMs, onScrubbing: (v) => setState(() => _mouseScrub = v), previewBuilder: _preview),
+          const SizedBox(height: 12),
         ],
         ExcludeFocus(
           child: Row(children: [
             if (e.isTv) ...[
+              _PillButton(label: 'Od početka', icon: Icons.replay_rounded, onTap: e.restartProgram),
+              const SizedBox(width: 10),
               _RoundButton(icon: Icons.skip_previous_rounded, tooltip: 'Prethodna emisija', onTap: e.previousProgram),
-              const SizedBox(width: 10),
-              _RoundButton(icon: Icons.replay_rounded, tooltip: 'Od početka (Home)', onTap: e.restartProgram, enabled: c?.hasArchive ?? false),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
             ],
             _RoundButton(icon: Icons.replay_10_rounded, tooltip: '−$skip s (←)', onTap: () => e.skip(Duration(seconds: -skip))),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             _RoundButton(icon: playing ? Icons.pause_rounded : Icons.play_arrow_rounded, tooltip: playing ? 'Pauza (Space)' : 'Nastavi (Space)', onTap: e.togglePlay, big: true),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             _RoundButton(icon: Icons.forward_10_rounded, tooltip: '+$skip s (→)', onTap: () => e.skip(Duration(seconds: skip))),
             if (e.isTv) ...[
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               _RoundButton(icon: Icons.skip_next_rounded, tooltip: 'Sljedeća emisija', onTap: e.nextProgram),
             ],
             if (e.kind == PlayKind.episode && e.nextEpisode != null) ...[
-              const SizedBox(width: 10),
-              _RoundButton(icon: Icons.skip_next_rounded, tooltip: 'Sljedeća epizoda', onTap: () => e.playEpisode(e.series!, e.nextEpisode!, e.episodes)),
+              const SizedBox(width: 8),
+              _PillButton(label: 'Sljedeća epizoda', icon: Icons.skip_next_rounded, onTap: () => e.playEpisode(e.series!, e.nextEpisode!, e.episodes)),
             ],
-            const SizedBox(width: 18),
-            if (e.isTv && !e.atLiveEdge)
+            if (e.isTv && !e.atLiveEdge) ...[
+              const SizedBox(width: 10),
               _PillButton(label: 'UŽIVO', icon: Icons.fiber_manual_record_rounded, color: OrbitColors.live, onTap: e.goLive),
-            if (e.isTv && p != null && e.atLiveEdge && (c?.hasArchive ?? false))
-              _PillButton(label: 'Od početka', icon: Icons.replay_rounded, onTap: e.restartProgram),
+            ],
             const Spacer(),
             _VolumeControl(engine: e),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             if (e.isTv) ...[
-              _RoundButton(icon: Icons.list_rounded, tooltip: 'Kanali (Enter)', onTap: _openDrawer),
-              const SizedBox(width: 10),
+              _RoundButton(icon: Icons.view_carousel_rounded, tooltip: 'Vodič kanala (G)', onTap: () => _setPanel(_Panel.guide)),
+              const SizedBox(width: 8),
+              _RoundButton(icon: Icons.format_list_bulleted_rounded, tooltip: 'Kanali (Enter)', onTap: () => _setPanel(_Panel.channels)),
+              const SizedBox(width: 8),
               _RoundButton(
                 icon: (c != null && s.prefs.isFavorite(c.id)) ? Icons.star_rounded : Icons.star_outline_rounded,
                 tooltip: 'Omiljeni',
+                active: c != null && s.prefs.isFavorite(c.id),
                 onTap: () {
                   if (c != null) s.prefs.toggleFavorite(c.id);
                   setState(() {});
                 },
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
             ],
-            _RoundButton(icon: Icons.tune_rounded, tooltip: 'Zvuk, titlovi i slika (A)', onTap: () => setState(() => _tracks = !_tracks)),
-            const SizedBox(width: 10),
+            _RoundButton(icon: Icons.tune_rounded, tooltip: 'Zvuk, titlovi i slika (A)', onTap: () => _setPanel(_Panel.tracks)),
+            const SizedBox(width: 8),
             _RoundButton(icon: _fullscreen ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded, tooltip: 'Cijeli ekran (F)', onTap: _toggleFullscreen),
           ]),
         ),
-        if (e.isTv && now.difference(e.playhead) > const Duration(minutes: 1) && p != null)
+        if (e.isTv)
           Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Text('Gledaš sa zakašnjenjem ${TimeFmt.clock(e.behindLive)} · ← → premotavanje · End = uživo', style: TextStyles.tiny),
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              e.behindLive > const Duration(minutes: 1)
+                  ? 'Gledaš sa zakašnjenjem ${TimeFmt.clock(e.behindLive)} · ← → premotavanje · End = uživo · G = vodič kanala'
+                  : '← → premotavanje · ↑ ↓ kanali · Enter lista kanala · G vodič kanala · Home od početka',
+              style: TextStyles.tiny,
+            ),
           ),
       ]),
     );
@@ -680,8 +818,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
       decoration: BoxDecoration(
         color: OrbitColors.bgElevated,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.o(0.85), width: 2),
-        boxShadow: [BoxShadow(color: Colors.black.o(0.6), blurRadius: 20)],
+        border: Border.all(color: OrbitColors.accent, width: 2),
+        boxShadow: [BoxShadow(color: Colors.black.o(0.65), blurRadius: 22)],
       ),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         ClipRRect(
@@ -692,18 +830,120 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 ? RawImage(image: img, fit: BoxFit.cover)
                 : Container(
                     color: OrbitColors.surface,
-                    child: Center(
-                      child: c != null ? ChannelLogo(name: c.name, url: c.logo, size: 64, background: false) : const Icon(Icons.movie_rounded, color: OrbitColors.textDim, size: 40),
-                    ),
+                    child: Center(child: c != null ? LogoBadge(channel: c, size: 44) : const Icon(Icons.movie_rounded, color: OrbitColors.textDim, size: 40)),
                   ),
           ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-            if (title != null) Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyles.small),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: OrbitColors.accent)),
+            if (title != null) Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
           ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _guidePanel() {
+    final c = e.channel;
+    final list = _guidePrograms();
+    final now = e.now;
+    final head = e.playhead;
+    final sel = list.isEmpty ? null : list[_guideIndex.clamp(0, list.length - 1)];
+    return GlassPanel(
+      opacity: 0.82,
+      border: false,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(40, 18, 30, 12),
+          child: Row(children: [
+            if (c != null) ...[LogoBadge(channel: c, size: 30), const SizedBox(width: 12)],
+            Text(c == null ? 'Vodič' : 'Vodič · ${c.name}', style: TextStyles.h2),
+            if (sel != null) ...[
+              const SizedBox(width: 14),
+              Text(TimeFmt.dayLabel(sel.start), style: const TextStyle(fontWeight: FontWeight.w800, color: OrbitColors.accent)),
+            ],
+            const Spacer(),
+            const Text('← → biraj · Enter gledaj · Esc zatvori', style: TextStyles.tiny),
+            const SizedBox(width: 10),
+            IconButton(onPressed: () => setState(() => _panel = _Panel.none), icon: const Icon(Icons.close_rounded)),
+          ]),
+        ),
+        Expanded(
+          child: list.isEmpty
+              ? const Center(child: Text('Učitavam program…', style: TextStyles.muted))
+              : ListView.separated(
+                  controller: _guideScroll,
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(40, 4, 40, 22),
+                  itemCount: list.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: _guideGap),
+                  itemBuilder: (_, i) {
+                    final p = list[i];
+                    final live = p.isLiveAt(now);
+                    final past = p.isPastAt(now);
+                    final watching = p.isLiveAt(head);
+                    final selected = i == _guideIndex;
+                    return SizedBox(
+                      width: _guideCardW,
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        onEnter: (_) => setState(() => _guideIndex = i),
+                        child: GestureDetector(
+                          onTap: () => _playFromGuide(p),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            decoration: BoxDecoration(
+                              color: selected ? OrbitColors.surfaceHigher : OrbitColors.surface.o(0.8),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: selected ? OrbitColors.accent : Colors.transparent, width: 3),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              AspectRatio(
+                                aspectRatio: 16 / 9,
+                                child: Stack(fit: StackFit.expand, children: [
+                                  if (c != null) Opacity(opacity: past || live ? 1 : 0.55, child: ProgramThumb(channel: c, program: p)),
+                                  if (live) const Positioned(left: 8, top: 8, child: LiveBadge(small: true)),
+                                  if (past && (c?.hasArchive ?? false))
+                                    Positioned(
+                                      left: 8,
+                                      top: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(color: Colors.black.o(0.7), borderRadius: BorderRadius.circular(6)),
+                                        child: const Icon(Icons.history_rounded, size: 14, color: OrbitColors.accent),
+                                      ),
+                                    ),
+                                  if (watching)
+                                    Positioned(
+                                      right: 8,
+                                      top: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                        decoration: BoxDecoration(color: OrbitColors.accent, borderRadius: BorderRadius.circular(6)),
+                                        child: const Text('GLEDAŠ', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: OrbitColors.onAccent, letterSpacing: 0.6)),
+                                      ),
+                                    ),
+                                  if (live) Positioned(left: 0, right: 0, bottom: 0, child: ProgressLine(p.progressAt(now), height: 4)),
+                                ]),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(11, 9, 11, 0),
+                                child: Text(TimeFmt.range(p.start, p.end), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: live ? OrbitColors.accent : OrbitColors.textMuted)),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(11, 3, 11, 0),
+                                child: Text(p.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700)),
+                              ),
+                            ]),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
         ),
       ]),
     );
@@ -713,25 +953,25 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final list = _list;
     final now = DateTime.now().toUtc();
     final title = e.zapList.isNotEmpty && list.isNotEmpty ? s.catalog.categoryName(list.first.categoryId) : 'Svi kanali';
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.black.o(0.92), Colors.black.o(0.78)]),
-        border: const Border(right: BorderSide(color: OrbitColors.stroke)),
-      ),
+    return GlassPanel(
+      opacity: 0.86,
+      border: false,
       child: SafeArea(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(22, 22, 12, 10),
+            padding: const EdgeInsets.fromLTRB(24, 24, 12, 12),
             child: Row(children: [
-              Expanded(child: Text(title, style: TextStyles.h2, maxLines: 1, overflow: TextOverflow.ellipsis)),
-              IconButton(onPressed: () => setState(() => _drawer = false), icon: const Icon(Icons.close_rounded)),
+              Container(width: 4, height: 22, decoration: BoxDecoration(color: OrbitColors.accent, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(width: 12),
+              Expanded(child: Text(title.isEmpty ? 'Kanali' : title, style: TextStyles.h2, maxLines: 1, overflow: TextOverflow.ellipsis)),
+              IconButton(onPressed: () => setState(() => _panel = _Panel.none), icon: const Icon(Icons.close_rounded)),
             ]),
           ),
           Expanded(
             child: ListView.builder(
               controller: _drawerScroll,
               itemExtent: _drawerItemH,
-              padding: const EdgeInsets.fromLTRB(10, 0, 10, 20),
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
               itemCount: list.length,
               itemBuilder: (_, i) {
                 final ch = list[i];
@@ -748,20 +988,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       margin: const EdgeInsets.only(bottom: 4),
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
-                        color: sel ? OrbitColors.violet.o(0.30) : (current ? Colors.white.o(0.06) : Colors.transparent),
+                        color: sel ? OrbitColors.accent.o(0.16) : (current ? Colors.white.o(0.06) : Colors.transparent),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: sel ? OrbitColors.cyan : Colors.transparent, width: 2),
+                        border: Border.all(color: sel ? OrbitColors.accent : Colors.transparent, width: 2),
                       ),
                       child: Row(children: [
-                        SizedBox(width: 34, child: Text('${ch.number}', textAlign: TextAlign.right, style: TextStyles.small.copyWith(fontWeight: FontWeight.w700))),
-                        const SizedBox(width: 10),
-                        ChannelLogo(name: ch.name, url: ch.logo, size: 44),
+                        SizedBox(width: 36, child: Text('${ch.number}', textAlign: TextAlign.right, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: current ? OrbitColors.accent : OrbitColors.textMuted))),
+                        const SizedBox(width: 12),
+                        ChannelLogo(name: ch.name, url: ch.logo, size: 46),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Row(children: [
-                              Flexible(child: Text(ch.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700))),
-                              if (current) const Padding(padding: EdgeInsets.only(left: 8), child: Icon(Icons.graphic_eq_rounded, size: 16, color: OrbitColors.cyan)),
+                              Flexible(child: Text(ch.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800))),
+                              if (current) const Padding(padding: EdgeInsets.only(left: 8), child: Icon(Icons.graphic_eq_rounded, size: 16, color: OrbitColors.accent)),
                             ]),
                             const SizedBox(height: 2),
                             Text(p?.title ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyles.small),
@@ -775,7 +1015,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
               },
             ),
           ),
-          const Padding(padding: EdgeInsets.fromLTRB(22, 4, 22, 16), child: Text('↑ ↓ biraj · Enter gledaj · Esc zatvori', style: TextStyles.tiny)),
+          const Padding(padding: EdgeInsets.fromLTRB(24, 4, 24, 16), child: Text('↑ ↓ biraj · Enter gledaj · Esc zatvori', style: TextStyles.tiny)),
         ]),
       ),
     );
@@ -786,7 +1026,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final sel = e.player.state.track;
     final audio = tracks.audio.where((t) => t.id != 'no' && t.id != 'auto').toList();
     final subs = tracks.subtitle.where((t) => t.id != 'no' && t.id != 'auto').toList();
-    String name(String id, String? title, String? lang, int i) {
+    String name(String? title, String? lang, int i) {
       final parts = [if (title != null && title.isNotEmpty) title, if (lang != null && lang.isNotEmpty) lang.toUpperCase()];
       return parts.isEmpty ? 'Zapis ${i + 1}' : parts.join(' · ');
     }
@@ -795,40 +1035,42 @@ class _PlayerScreenState extends State<PlayerScreen> {
       return InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(color: active ? OrbitColors.accent.o(0.14) : Colors.transparent, borderRadius: BorderRadius.circular(10)),
           child: Row(children: [
-            Icon(active ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded, size: 18, color: active ? OrbitColors.cyan : OrbitColors.textDim),
+            Icon(active ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded, size: 19, color: active ? OrbitColors.accent : OrbitColors.textDim),
             const SizedBox(width: 12),
-            Expanded(child: Text(label, style: TextStyle(fontWeight: active ? FontWeight.w700 : FontWeight.w500))),
+            Expanded(child: Text(label, style: TextStyle(fontWeight: active ? FontWeight.w800 : FontWeight.w500))),
           ]),
         ),
       );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.black.o(0.78), Colors.black.o(0.92)]),
-        border: const Border(left: BorderSide(color: OrbitColors.stroke)),
-      ),
+    return GlassPanel(
+      opacity: 0.86,
+      border: false,
       child: SafeArea(
-        child: ListView(padding: const EdgeInsets.fromLTRB(16, 22, 16, 24), children: [
+        child: ListView(padding: const EdgeInsets.fromLTRB(18, 24, 18, 24), children: [
           Row(children: [
             const Expanded(child: Text('Zvuk i slika', style: TextStyles.h2)),
-            IconButton(onPressed: () => setState(() => _tracks = false), icon: const Icon(Icons.close_rounded)),
+            IconButton(onPressed: () => setState(() => _panel = _Panel.none), icon: const Icon(Icons.close_rounded)),
           ]),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           const Text('ZVUK', style: TextStyles.label),
+          const SizedBox(height: 6),
           if (audio.isEmpty) const Padding(padding: EdgeInsets.all(12), child: Text('Samo jedan zvučni zapis', style: TextStyles.small)),
-          for (var i = 0; i < audio.length; i++) option(name(audio[i].id, audio[i].title, audio[i].language, i), sel.audio.id == audio[i].id, () => e.setAudio(audio[i])),
+          for (var i = 0; i < audio.length; i++) option(name(audio[i].title, audio[i].language, i), sel.audio.id == audio[i].id, () => e.setAudio(audio[i])),
           const SizedBox(height: 16),
           const Text('TITLOVI', style: TextStyles.label),
+          const SizedBox(height: 6),
           option('Bez titlova', sel.subtitle.id == 'no' || subs.isEmpty, () => e.setSubtitle(SubtitleTrack.no())),
-          for (var i = 0; i < subs.length; i++) option(name(subs[i].id, subs[i].title, subs[i].language, i), sel.subtitle.id == subs[i].id, () => e.setSubtitle(subs[i])),
+          for (var i = 0; i < subs.length; i++) option(name(subs[i].title, subs[i].language, i), sel.subtitle.id == subs[i].id, () => e.setSubtitle(subs[i])),
           const SizedBox(height: 16),
           const Text('FORMAT SLIKE', style: TextStyles.label),
-          for (final a in const [('auto', 'Automatski'), ('16:9', '16:9'), ('4:3', '4:3'), ('zoom', 'Popuni ekran (zoom)'), ('stretch', 'Razvuci')])
-            option(a.$2, _aspect == a.$1, () => _setAspect(a.$1)),
+          const SizedBox(height: 6),
+          for (final a in const [('auto', 'Automatski'), ('16:9', '16:9'), ('4:3', '4:3'), ('zoom', 'Popuni ekran (zoom)'), ('stretch', 'Razvuci')]) option(a.$2, _aspect == a.$1, () => _setAspect(a.$1)),
         ]),
       ),
     );
@@ -841,19 +1083,19 @@ class _Spinner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: Colors.black.o(0.45), shape: BoxShape.circle),
-      child: const SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 3.5, color: OrbitColors.cyan)),
+      decoration: BoxDecoration(color: Colors.black.o(0.5), shape: BoxShape.circle),
+      child: const SizedBox(width: 42, height: 42, child: CircularProgressIndicator(strokeWidth: 4, color: OrbitColors.accent)),
     );
   }
 }
 
 class _RoundButton extends StatefulWidget {
-  const _RoundButton({required this.icon, required this.tooltip, required this.onTap, this.big = false, this.enabled = true});
+  const _RoundButton({required this.icon, required this.tooltip, required this.onTap, this.big = false, this.active = false});
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
   final bool big;
-  final bool enabled;
+  final bool active;
   @override
   State<_RoundButton> createState() => _RoundButtonState();
 }
@@ -862,25 +1104,29 @@ class _RoundButtonState extends State<_RoundButton> {
   bool _hover = false;
   @override
   Widget build(BuildContext context) {
-    final size = widget.big ? 64.0 : 48.0;
+    final size = widget.big ? 66.0 : 48.0;
+    final yellow = widget.big || widget.active;
     return Tooltip(
       message: widget.tooltip,
       child: MouseRegion(
-        cursor: widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
         child: GestureDetector(
-          onTap: widget.enabled ? widget.onTap : null,
-          child: AnimatedContainer(
+          onTap: widget.onTap,
+          child: AnimatedScale(
+            scale: _hover ? 1.08 : 1.0,
             duration: const Duration(milliseconds: 140),
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: widget.big ? OrbitColors.accentGradient : null,
-              color: widget.big ? null : Colors.white.o(_hover ? 0.22 : 0.12),
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: yellow ? OrbitColors.accent : Colors.white.o(_hover ? 0.24 : 0.13),
+                border: yellow ? null : Border.all(color: Colors.white.o(0.10)),
+              ),
+              child: Icon(widget.icon, size: widget.big ? 38 : 25, color: yellow ? OrbitColors.onAccent : Colors.white),
             ),
-            child: Icon(widget.icon, size: widget.big ? 36 : 26, color: widget.enabled ? Colors.white : Colors.white38),
           ),
         ),
       ),
@@ -888,25 +1134,40 @@ class _RoundButtonState extends State<_RoundButton> {
   }
 }
 
-class _PillButton extends StatelessWidget {
+class _PillButton extends StatefulWidget {
   const _PillButton({required this.label, required this.icon, required this.onTap, this.color});
   final String label;
   final IconData icon;
   final VoidCallback onTap;
   final Color? color;
   @override
+  State<_PillButton> createState() => _PillButtonState();
+}
+
+class _PillButtonState extends State<_PillButton> {
+  bool _hover = false;
+  @override
   Widget build(BuildContext context) {
+    final c = widget.color;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-          decoration: BoxDecoration(color: (color ?? Colors.white).o(0.18), borderRadius: BorderRadius.circular(30), border: Border.all(color: (color ?? Colors.white).o(0.6))),
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          decoration: BoxDecoration(
+            color: c != null ? c.o(_hover ? 0.32 : 0.2) : Colors.white.o(_hover ? 0.24 : 0.13),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: (c ?? Colors.white).o(c != null ? 0.7 : 0.12)),
+          ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 16, color: color ?? Colors.white),
+            Icon(widget.icon, size: 18, color: c ?? Colors.white),
             const SizedBox(width: 8),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.6)),
+            Text(widget.label, style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.3)),
           ]),
         ),
       ),
@@ -926,10 +1187,10 @@ class _VolumeControl extends StatelessWidget {
         icon: Icon(v <= 0 ? Icons.volume_off_rounded : (v < 50 ? Icons.volume_down_rounded : Icons.volume_up_rounded)),
       ),
       SizedBox(
-        width: 120,
+        width: 110,
         child: SliderTheme(
           data: SliderTheme.of(context).copyWith(trackHeight: 3, thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7), overlayShape: SliderComponentShape.noOverlay),
-          child: Slider(value: v.clamp(0, 100).toDouble(), min: 0, max: 100, activeColor: OrbitColors.cyan, onChanged: (x) => engine.setVolume(x)),
+          child: Slider(value: v.clamp(0, 100).toDouble(), min: 0, max: 100, activeColor: OrbitColors.accent, onChanged: (x) => engine.setVolume(x)),
         ),
       ),
     ]);

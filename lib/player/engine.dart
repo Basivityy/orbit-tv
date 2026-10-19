@@ -42,7 +42,7 @@ class EngineHost {
   final Program? Function(Channel, DateTime) programAt;
   final Future<void> Function(Channel) ensureEpg;
   final void Function(Channel) onChannelStarted;
-  final void Function(Program, Uint8List png) onProgramFrame;
+  final void Function(Program, Uint8List png, Uint8List? largePng) onProgramFrame;
   final void Function(ResumePoint) onResume;
   /// Frame for a seek preview from a separate connection (null when not allowed).
   final Future<ui.Image?> Function(String url, Duration seek) grabPreview;
@@ -818,7 +818,14 @@ class PlayerEngine extends ChangeNotifier {
       if (isTv && p != null && _savedThumbFor?.key != p.key && playhead.difference(p.start) > const Duration(minutes: 2)) {
         _savedThumbFor = p;
         final png = await imageToPng(img);
-        if (png != null) host.onProgramFrame(p, png);
+        Uint8List? largePng;
+        final big = downscaleBgra(raw, w, h, outW: kLargeW, outH: kLargeH);
+        if (big != null) {
+          final bigImg = await rgbaToImage(big, w: kLargeW, h: kLargeH);
+          largePng = await imageToPng(bigImg);
+          bigImg.dispose();
+        }
+        if (png != null) host.onProgramFrame(p, png, largePng);
       }
     } catch (_) {}
   }

@@ -1,9 +1,9 @@
-; Orbit TV — Windows installer (Inno Setup 6). Built by .github/workflows/windows.yml.
+; Orbit Player — Windows installer (Inno Setup 6). Built by .github/workflows/windows.yml.
 #ifndef AppVersion
   #define AppVersion "1.0.0"
 #endif
-#define AppName "Orbit TV"
-#define AppExe "OrbitTV.exe"
+#define AppName "Orbit Player"
+#define AppExe "OrbitPlayer.exe"
 #define SourceDir "..\build\windows\x64\runner\Release"
 
 [Setup]
@@ -16,7 +16,7 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 OutputDir=..\dist
-OutputBaseFilename=OrbitTV-Setup-{#AppVersion}
+OutputBaseFilename=OrbitPlayer-Setup-{#AppVersion}
 SetupIconFile=app_icon.ico
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName}

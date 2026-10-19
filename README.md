@@ -1,4 +1,4 @@
-# Orbit TV (Windows)
+# Orbit Player (Windows)
 
 IPTV plejer za Xtream Codes / XUI.ONE servise: TV uživo, TV vodič sa sličicama, catch-up (arhiva),
 premotavanje emisije koja još traje, sličice dok premotavaš, filmovi i serije.
@@ -30,6 +30,7 @@ Aplikacija je "gola": nema nikakav sadržaj, korisnik se prijavljuje svojim poda
 | ↑ ↓, PageUp/PageDown | Sljedeći / prethodni kanal |
 | 0–9 | Broj kanala |
 | Enter / L | Lista kanala |
+| G / Tab | Vodič kanala (emisije prije/sada/poslije, pusti prošlu iz arhive) |
 | Home | Emisija od početka |
 | End / U | Nazad uživo |
 | A | Zvuk, titlovi, format slike |
@@ -40,8 +41,8 @@ Aplikacija je "gola": nema nikakav sadržaj, korisnik se prijavljuje svojim poda
 ## Build (GitHub Actions)
 
 Svaki push na `main` pokreće `.github/workflows/windows.yml`:
-analiza koda → testovi → `flutter build windows` → portable `.zip` + instalacija `OrbitTV-Setup-x.y.z.exe`
-(Actions → zadnji run → Artifacts). Tag `v1.0.0` pravi i GitHub Release.
+analiza koda → testovi → `flutter build windows` → portable `.zip` + instalacija `OrbitPlayer-Setup-x.y.z.exe`
+(Actions → zadnji run → Artifacts). Commit sa `[release]` u poruci pravi GitHub Release (instalacija + portable zip).
 
 Lokalno (Windows, Flutter 3.27.4, Visual Studio 2022 sa "Desktop development with C++"):
 

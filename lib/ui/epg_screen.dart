@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -12,11 +13,12 @@ import 'widgets/common.dart';
 import 'widgets/tv_widgets.dart';
 
 const double _pxPerMin = 6.0;
-const double _rowH = 82.0;
-const double _chanW = 240.0;
-const double _headerH = 44.0;
+const double _rowH = 74.0;
+const double _chanW = 132.0;
+const double _headerH = 40.0;
 
-/// TV vodič: channels × time grid with archive, live and upcoming programmes.
+/// TV vodič (EON style): the selected programme on top (picture, text, actions),
+/// channels × time grid below with archive, live and upcoming programmes.
 class EpgScreen extends StatefulWidget {
   const EpgScreen({super.key});
   @override
@@ -32,6 +34,10 @@ class _EpgScreenState extends State<EpgScreen> {
   final _h = ScrollController();
   final _hHeader = ScrollController();
   bool _syncV = false, _syncH = false;
+
+  (Channel, Program)? _sel;
+  (Channel, Program)? _hover;
+  Timer? _hoverT;
 
   @override
   void initState() {
@@ -63,6 +69,7 @@ class _EpgScreenState extends State<EpgScreen> {
 
   @override
   void dispose() {
+    _hoverT?.cancel();
     _vChannels.dispose();
     _vRows.dispose();
     _h.dispose();
@@ -78,13 +85,38 @@ class _EpgScreenState extends State<EpgScreen> {
   void _scrollToNow() {
     if (!_h.hasClients) return;
     final now = DateTime.now().toUtc();
-    final x = _dayOffset == 0 ? _x(now.subtract(const Duration(minutes: 40))) : _x(_dayStart.add(const Duration(hours: 18)));
+    final x = _dayOffset == 0 ? _x(now.subtract(const Duration(minutes: 45))) : _x(_dayStart.add(const Duration(hours: 18)));
     _h.animateTo(x.clamp(0.0, _h.position.maxScrollExtent), duration: const Duration(milliseconds: 400), curve: Curves.easeOutCubic);
   }
 
-  List<Channel> _channels() => s.catalog.channelsIn(_cat, favorites: s.prefs.favorites, recent: s.prefs.recentChannels);
+  List<Channel> _channels() => s.catalog.channelsIn(_cat, favorites: s.prefs.favorites);
 
-  void _openProgram(Channel c, Program p) => showProgramDialog(context, c, p, list: _channels());
+  void _onHover((Channel, Program)? v) {
+    _hoverT?.cancel();
+    _hoverT = Timer(const Duration(milliseconds: 140), () {
+      if (mounted) setState(() => _hover = v);
+    });
+  }
+
+  void _tap(Channel c, Program p) {
+    final same = _sel != null && _sel!.$1.id == c.id && _sel!.$2.key == p.key;
+    if (same) {
+      _play(c, p);
+    } else {
+      setState(() => _sel = (c, p));
+    }
+  }
+
+  void _play(Channel c, Program p) {
+    final now = DateTime.now().toUtc();
+    if (p.isLiveAt(now) || p.start.isAfter(now)) {
+      playChannel(context, c, list: _channels());
+    } else if (c.hasArchive) {
+      playArchive(context, c, p.start, list: _channels());
+    } else {
+      playChannel(context, c, list: _channels());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,162 +126,252 @@ class _EpgScreenState extends State<EpgScreen> {
       builder: (context, _) {
         final channels = _channels();
         final days = <int>[for (var d = -7; d <= 1; d++) d];
-        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          PageHeader(
-            title: 'TV vodič',
-            subtitle: 'Kanali sa ikonom ⟲ imaju arhivu — prošle emisije možeš gledati.',
-            actions: [
-              _CategoryMenu(value: _cat, onChanged: (v) => setState(() => _cat = v)),
-              const SizedBox(width: 10),
-              OutlinedButton.icon(
-                onPressed: () {
-                  setState(() => _dayOffset = 0);
-                  WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNow());
+        return LayoutBuilder(builder: (context, box) {
+          final previewH = (box.maxHeight * 0.38).clamp(220.0, 340.0);
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            // Selected programme
+            SizedBox(
+              height: previewH,
+              child: ListenableBuilder(
+                listenable: s.epg,
+                builder: (context, _) {
+                  final now = DateTime.now().toUtc();
+                  var shown = _hover ?? _sel;
+                  if (shown == null && channels.isNotEmpty) {
+                    final c = channels.first;
+                    final p = s.epg.at(c.id, now);
+                    if (p != null) shown = (c, p);
+                  }
+                  if (shown == null) return const SizedBox.shrink();
+                  final (sc, sp) = shown;
+                  return _GuidePreview(channel: sc, program: sp, onPlay: () => _play(sc, sp), onStartOver: () => playArchive(context, sc, sp.start, list: channels));
                 },
-                icon: const Icon(Icons.my_location_rounded, size: 18),
-                label: const Text('Sada'),
               ),
-            ],
-          ),
-          // Day chips
-          SizedBox(
-            height: 44,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: Gap.page),
-              children: [
-                for (final d in days)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FocusTile(
-                      scale: 1.0,
-                      radius: 10,
-                      onTap: () {
-                        setState(() => _dayOffset = d);
-                        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNow());
-                      },
-                      color: d == _dayOffset ? OrbitColors.violet.o(0.25) : OrbitColors.surface,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      child: Text(TimeFmt.dayLabel(DateTime.now().add(Duration(days: d))), style: TextStyle(fontWeight: d == _dayOffset ? FontWeight.w700 : FontWeight.w500)),
-                    ),
-                  ),
-              ],
             ),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: channels.isEmpty
-                ? const MessageView(icon: Icons.view_timeline_rounded, title: 'Nema kanala u ovoj listi')
-                : ListenableBuilder(
-                    listenable: s.epg,
-                    builder: (context, _) => Ticker(
-                      period: const Duration(seconds: 30),
-                      builder: (_) {
-                        final now = DateTime.now().toUtc();
-                        final nowX = _x(now);
-                        final showNow = now.isAfter(_dayStart) && now.isBefore(_dayEnd);
-                        return Padding(
-                          padding: const EdgeInsets.only(left: Gap.page - 10),
-                          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                            // Channel column
-                            SizedBox(
-                              width: _chanW,
-                              child: Column(children: [
-                                const SizedBox(height: _headerH),
-                                Expanded(
-                                  child: ListView.builder(
-                                    controller: _vChannels,
-                                    itemExtent: _rowH,
-                                    itemCount: channels.length,
-                                    itemBuilder: (_, i) {
-                                      final c = channels[i];
-                                      return Padding(
-                                        padding: const EdgeInsets.only(right: 8, bottom: 6),
-                                        child: FocusTile(
-                                          scale: 1.0,
-                                          radius: 12,
-                                          color: OrbitColors.surface,
-                                          onTap: () => playChannel(context, c, list: channels),
-                                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                                          child: Row(children: [
-                                            ChannelLogo(name: c.name, url: c.logo, size: 46),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                                Text(c.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-                                                const SizedBox(height: 3),
-                                                Row(children: [
-                                                  Text('${c.number}', style: TextStyles.tiny),
-                                                  if (c.hasArchive) ...[const SizedBox(width: 6), const Icon(Icons.history_rounded, size: 13, color: OrbitColors.cyan)],
-                                                ]),
+            // Days, category, now
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 6, Gap.page, 12),
+              child: Row(children: [
+                Expanded(
+                  child: ChipBar(
+                    items: [for (final d in days) ('$d', TimeFmt.dayLabel(DateTime.now().add(Duration(days: d))))],
+                    selected: '$_dayOffset',
+                    onSelect: (v) {
+                      setState(() => _dayOffset = int.parse(v));
+                      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNow());
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _CategoryMenu(value: _cat, onChanged: (v) => setState(() => _cat = v)),
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    setState(() => _dayOffset = 0);
+                    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNow());
+                  },
+                  icon: const Icon(Icons.my_location_rounded, size: 18),
+                  label: const Text('Sada'),
+                ),
+              ]),
+            ),
+            Expanded(
+              child: channels.isEmpty
+                  ? const MessageView(icon: Icons.view_timeline_rounded, title: 'Nema kanala u ovoj listi')
+                  : ListenableBuilder(
+                      listenable: s.epg,
+                      builder: (context, _) => Ticker(
+                        period: const Duration(seconds: 30),
+                        builder: (_) {
+                          final now = DateTime.now().toUtc();
+                          final nowX = _x(now);
+                          final showNow = now.isAfter(_dayStart) && now.isBefore(_dayEnd);
+                          return Padding(
+                            padding: const EdgeInsets.only(left: Gap.page - 12),
+                            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                              // Channel column
+                              SizedBox(
+                                width: _chanW,
+                                child: Column(children: [
+                                  const SizedBox(height: _headerH),
+                                  Expanded(
+                                    child: ListView.builder(
+                                      controller: _vChannels,
+                                      itemExtent: _rowH,
+                                      itemCount: channels.length,
+                                      itemBuilder: (_, i) {
+                                        final c = channels[i];
+                                        return Padding(
+                                          padding: const EdgeInsets.only(right: 8, bottom: 6),
+                                          child: Tooltip(
+                                            message: '${c.number}  ${c.name}',
+                                            waitDuration: const Duration(milliseconds: 600),
+                                            child: FocusTile(
+                                              scale: 1.0,
+                                              radius: 10,
+                                              color: OrbitColors.surfaceHigh,
+                                              onTap: () => playChannel(context, c, list: channels),
+                                              child: Stack(children: [
+                                                Positioned.fill(
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.fromLTRB(22, 10, 22, 10),
+                                                    child: NetImage(c.logo, fit: BoxFit.contain, cacheWidth: 200, placeholder: Center(child: Text(c.name, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))),
+                                                  ),
+                                                ),
+                                                Positioned(left: 7, top: 5, child: Text('${c.number}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: OrbitColors.textMuted))),
+                                                if (c.hasArchive) const Positioned(right: 6, bottom: 5, child: Icon(Icons.history_rounded, size: 13, color: OrbitColors.accent)),
                                               ]),
                                             ),
-                                          ]),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ]),
-                            ),
-                            // Time grid
-                            Expanded(
-                              child: Column(children: [
-                                SizedBox(
-                                  height: _headerH,
-                                  child: SingleChildScrollView(
-                                    controller: _hHeader,
-                                    scrollDirection: Axis.horizontal,
-                                    child: SizedBox(width: width, child: _TimeHeader(dayStart: _dayStart, nowX: showNow ? nowX : null)),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: SingleChildScrollView(
-                                    controller: _h,
-                                    scrollDirection: Axis.horizontal,
-                                    child: SizedBox(
-                                      width: width,
-                                      child: Stack(children: [
-                                        Positioned.fill(
-                                          child: ListView.builder(
-                                            controller: _vRows,
-                                            itemExtent: _rowH,
-                                            itemCount: channels.length,
-                                            itemBuilder: (_, i) {
-                                              final c = channels[i];
-                                              s.epg.ensureFull(c, urgent: false);
-                                              return _EpgRow(
-                                                channel: c,
-                                                programs: s.epg.between(c.id, _dayStart, _dayEnd),
-                                                dayStart: _dayStart,
-                                                now: now,
-                                                onTap: (p) => _openProgram(c, p),
-                                              );
-                                            },
                                           ),
-                                        ),
-                                        if (showNow)
-                                          Positioned(
-                                            left: nowX - 1,
-                                            top: 0,
-                                            bottom: 0,
-                                            child: IgnorePointer(child: Container(width: 2, color: OrbitColors.live)),
-                                          ),
-                                      ]),
+                                        );
+                                      },
                                     ),
                                   ),
-                                ),
-                              ]),
-                            ),
-                          ]),
-                        );
-                      },
+                                ]),
+                              ),
+                              // Time grid
+                              Expanded(
+                                child: Column(children: [
+                                  SizedBox(
+                                    height: _headerH,
+                                    child: SingleChildScrollView(
+                                      controller: _hHeader,
+                                      scrollDirection: Axis.horizontal,
+                                      child: SizedBox(width: width, child: _TimeHeader(dayStart: _dayStart, nowX: showNow ? nowX : null)),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      controller: _h,
+                                      scrollDirection: Axis.horizontal,
+                                      child: SizedBox(
+                                        width: width,
+                                        child: Stack(children: [
+                                          Positioned.fill(
+                                            child: ListView.builder(
+                                              controller: _vRows,
+                                              itemExtent: _rowH,
+                                              itemCount: channels.length,
+                                              itemBuilder: (_, i) {
+                                                final c = channels[i];
+                                                s.epg.ensureFull(c, urgent: false);
+                                                return _EpgRow(
+                                                  channel: c,
+                                                  programs: s.epg.between(c.id, _dayStart, _dayEnd),
+                                                  dayStart: _dayStart,
+                                                  now: now,
+                                                  selectedKey: _sel?.$1.id == c.id ? _sel?.$2.key : null,
+                                                  onTap: (p) => _tap(c, p),
+                                                  onHover: (p) => _onHover(p == null ? null : (c, p)),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                          if (showNow)
+                                            Positioned(
+                                              left: nowX - 1,
+                                              top: 0,
+                                              bottom: 0,
+                                              child: IgnorePointer(child: Container(width: 2, color: OrbitColors.accent)),
+                                            ),
+                                        ]),
+                                      ),
+                                    ),
+                                  ),
+                                ]),
+                              ),
+                            ]),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-          ),
-        ]);
+            ),
+          ]);
+        });
       },
     );
+  }
+}
+
+/// Top of the guide: picture of the selected programme and what can be done with it.
+class _GuidePreview extends StatelessWidget {
+  const _GuidePreview({required this.channel, required this.program, required this.onPlay, required this.onStartOver});
+  final Channel channel;
+  final Program program;
+  final VoidCallback onPlay;
+  final VoidCallback onStartOver;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = program;
+    final now = DateTime.now().toUtc();
+    final live = p.isLiveAt(now);
+    final past = p.isPastAt(now);
+    final archiveFrom = channel.archiveStart(now);
+    final playable = channel.hasArchive && (archiveFrom == null || p.start.isAfter(archiveFrom));
+    final width = MediaQuery.sizeOf(context).width;
+    Widget status;
+    if (live) {
+      status = const LiveBadge();
+    } else if (past) {
+      status = Pill(playable ? 'ARHIVA' : 'NIJE U ARHIVI', icon: Icons.history_rounded, color: playable ? OrbitColors.accent : OrbitColors.textMuted);
+    } else {
+      final mins = p.start.difference(now).inMinutes;
+      status = Pill(mins < 60 ? 'POČINJE ZA $mins MIN' : 'USKORO', icon: Icons.schedule_rounded, color: OrbitColors.textMuted);
+    }
+    return Stack(fit: StackFit.expand, children: [
+      // Picture on the right, melting into the background.
+      Align(
+        alignment: Alignment.centerRight,
+        child: FractionallySizedBox(
+          widthFactor: 0.6,
+          heightFactor: 1,
+          child: ShaderMask(
+            blendMode: BlendMode.dstIn,
+            shaderCallback: (r) => const LinearGradient(colors: [Color(0x00FFFFFF), Color(0xFFFFFFFF)], stops: [0.0, 0.45]).createShader(r),
+            child: ShaderMask(
+              blendMode: BlendMode.dstIn,
+              shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF), Color(0x00FFFFFF)], stops: [0, 0.7, 1]).createShader(r),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: ProgramThumb(key: ValueKey(p.key), channel: channel, program: p, large: true),
+              ),
+            ),
+          ),
+        ),
+      ),
+      Positioned(
+        left: Gap.page,
+        top: 18,
+        bottom: 12,
+        width: (width * 0.5).clamp(380.0, 720.0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+          Row(children: [
+            LogoBadge(channel: channel, size: 34),
+            const SizedBox(width: 12),
+            status,
+            const SizedBox(width: 10),
+            Flexible(child: Text('${channel.number}  ${channel.name}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, color: OrbitColors.textMuted))),
+          ]),
+          const SizedBox(height: 12),
+          Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyles.h1),
+          const SizedBox(height: 8),
+          Text('${TimeFmt.dayLabel(p.start)} · ${TimeFmt.range(p.start, p.end)} · ${TimeFmt.humanMinutes(p.duration)}', style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: OrbitColors.textMuted)),
+          if (live) ...[const SizedBox(height: 10), SizedBox(width: 320, child: ProgressLine(p.progressAt(now), height: 4))],
+          if (p.description.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Flexible(child: Text(p.description, maxLines: 3, overflow: TextOverflow.ellipsis, style: TextStyles.muted)),
+          ],
+          const SizedBox(height: 14),
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            if (live) ElevatedButton.icon(onPressed: onPlay, icon: const Icon(Icons.play_arrow_rounded), label: const Text('Gledaj uživo')),
+            if (live && playable) OutlinedButton.icon(onPressed: onStartOver, icon: const Icon(Icons.replay_rounded), label: const Text('Od početka')),
+            if (past && playable) ElevatedButton.icon(onPressed: onPlay, icon: const Icon(Icons.history_rounded), label: const Text('Gledaj iz arhive')),
+            if (!live && !(past && playable)) OutlinedButton.icon(onPressed: onPlay, icon: const Icon(Icons.live_tv_rounded), label: const Text('Gledaj kanal')),
+          ]),
+        ]),
+      ),
+    ]);
   }
 }
 
@@ -266,19 +388,19 @@ class _TimeHeader extends StatelessWidget {
           top: 0,
           bottom: 0,
           child: Container(
-            padding: const EdgeInsets.only(left: 6, top: 12),
-            decoration: const BoxDecoration(border: Border(left: BorderSide(color: OrbitColors.stroke))),
-            child: Text(TimeFmt.hm(dayStart.add(Duration(minutes: m))), style: TextStyles.small.copyWith(fontWeight: FontWeight.w600)),
+            padding: const EdgeInsets.only(left: 8, top: 10),
+            decoration: BoxDecoration(border: Border(left: BorderSide(color: m % 60 == 0 ? OrbitColors.stroke : OrbitColors.stroke.o(0.5)))),
+            child: Text(TimeFmt.hm(dayStart.add(Duration(minutes: m))), style: TextStyle(fontSize: 13, fontWeight: m % 60 == 0 ? FontWeight.w800 : FontWeight.w600, color: m % 60 == 0 ? OrbitColors.text : OrbitColors.textMuted)),
           ),
         ),
       if (nowX != null)
         Positioned(
-          left: nowX! - 22,
-          top: 8,
+          left: nowX! - 26,
+          top: 6,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-            decoration: BoxDecoration(color: OrbitColors.live, borderRadius: BorderRadius.circular(6)),
-            child: Text(TimeFmt.hm(DateTime.now()), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+            decoration: BoxDecoration(color: OrbitColors.accent, borderRadius: BorderRadius.circular(6)),
+            child: Text(TimeFmt.hm(DateTime.now()), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: OrbitColors.onAccent)),
           ),
         ),
     ]);
@@ -286,12 +408,14 @@ class _TimeHeader extends StatelessWidget {
 }
 
 class _EpgRow extends StatelessWidget {
-  const _EpgRow({required this.channel, required this.programs, required this.dayStart, required this.now, required this.onTap});
+  const _EpgRow({required this.channel, required this.programs, required this.dayStart, required this.now, required this.onTap, required this.onHover, this.selectedKey});
   final Channel channel;
   final List<Program> programs;
   final DateTime dayStart;
   final DateTime now;
   final void Function(Program) onTap;
+  final void Function(Program?) onHover;
+  final String? selectedKey;
 
   @override
   Widget build(BuildContext context) {
@@ -316,7 +440,7 @@ class _EpgRow extends StatelessWidget {
             final start = p.start.isBefore(dayStart) ? dayStart : p.start;
             final end = p.end.isAfter(dayEnd) ? dayEnd : p.end;
             final left = start.difference(dayStart).inSeconds / 60 * _pxPerMin;
-            final w = math.max(4.0, end.difference(start).inSeconds / 60 * _pxPerMin - 3);
+            final w = math.max(4.0, end.difference(start).inSeconds / 60 * _pxPerMin - 4);
             final live = p.isLiveAt(now);
             final past = p.isPastAt(now);
             final playable = past && channel.hasArchive && (archiveFrom == null || p.start.isAfter(archiveFrom));
@@ -325,7 +449,11 @@ class _EpgRow extends StatelessWidget {
               top: 0,
               bottom: 0,
               width: w,
-              child: _ProgramTile(channel: channel, program: p, live: live, past: past, playable: playable, width: w, now: now, onTap: () => onTap(p)),
+              child: MouseRegion(
+                onEnter: (_) => onHover(p),
+                onExit: (_) => onHover(null),
+                child: _ProgramTile(program: p, live: live, past: past, playable: playable, selected: p.key == selectedKey, now: now, onTap: () => onTap(p), onFocus: (v) => onHover(v ? p : null)),
+              ),
             );
           }),
       ]),
@@ -334,54 +462,39 @@ class _EpgRow extends StatelessWidget {
 }
 
 class _ProgramTile extends StatelessWidget {
-  const _ProgramTile({required this.channel, required this.program, required this.live, required this.past, required this.playable, required this.width, required this.now, required this.onTap});
-  final Channel channel;
+  const _ProgramTile({required this.program, required this.live, required this.past, required this.playable, required this.selected, required this.now, required this.onTap, required this.onFocus});
   final Program program;
-  final bool live, past, playable;
-  final double width;
+  final bool live, past, playable, selected;
   final DateTime now;
   final VoidCallback onTap;
+  final ValueChanged<bool> onFocus;
 
   @override
   Widget build(BuildContext context) {
-    final showThumb = width >= 230;
     final textColor = past && !playable ? OrbitColors.textDim : OrbitColors.text;
-    return Tooltip(
-      message: '${program.title}\n${TimeFmt.range(program.start, program.end)}',
-      waitDuration: const Duration(milliseconds: 700),
-      child: FocusTile(
-        onTap: onTap,
-        scale: 1.0,
-        radius: 10,
-        color: live ? OrbitColors.surfaceHigh : (past ? OrbitColors.surface.o(0.55) : OrbitColors.surface),
-        selected: live,
-        child: Stack(children: [
-          Row(children: [
-            if (showThumb)
-              Padding(
-                padding: const EdgeInsets.all(6),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(7),
-                  child: SizedBox(width: (_rowH - 18) * 16 / 9, child: Opacity(opacity: past && !playable ? 0.45 : 1, child: ProgramThumb(channel: channel, program: program))),
-                ),
-              ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(showThumb ? 4 : 10, 8, 8, 8),
-                child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(program.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor, height: 1.2)),
-                  const SizedBox(height: 4),
-                  Row(children: [
-                    if (playable) const Padding(padding: EdgeInsets.only(right: 4), child: Icon(Icons.history_rounded, size: 13, color: OrbitColors.cyan)),
-                    Flexible(child: Text(TimeFmt.range(program.start, program.end), maxLines: 1, overflow: TextOverflow.clip, style: TextStyles.tiny)),
-                  ]),
-                ]),
-              ),
-            ),
+    final bg = selected ? OrbitColors.accent.o(0.16) : (live ? OrbitColors.surfaceHigher : (past ? OrbitColors.surface.o(0.7) : OrbitColors.surfaceHigh));
+    return FocusTile(
+      onTap: onTap,
+      onFocus: onFocus,
+      scale: 1.0,
+      radius: 10,
+      color: bg,
+      selected: selected,
+      child: Stack(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(11, 8, 8, 8),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(program.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: live ? FontWeight.w800 : FontWeight.w600, color: textColor)),
+            const SizedBox(height: 4),
+            Row(children: [
+              if (playable) const Padding(padding: EdgeInsets.only(right: 4), child: Icon(Icons.history_rounded, size: 13, color: OrbitColors.accent)),
+              if (live) const Padding(padding: EdgeInsets.only(right: 5), child: Icon(Icons.circle, size: 8, color: OrbitColors.live)),
+              Flexible(child: Text(TimeFmt.range(program.start, program.end), maxLines: 1, overflow: TextOverflow.clip, style: TextStyles.tiny.copyWith(color: OrbitColors.textMuted))),
+            ]),
           ]),
-          if (live) Positioned(left: 0, right: 0, bottom: 0, child: ProgressLine(program.progressAt(now), height: 3)),
-        ]),
-      ),
+        ),
+        if (live) Positioned(left: 0, right: 0, bottom: 0, child: ProgressLine(program.progressAt(now), height: 3)),
+      ]),
     );
   }
 }
@@ -394,23 +507,21 @@ class _CategoryMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = AppServices.I;
     final items = <MapEntry<String, String>>[
-      const MapEntry(Cat.favorites, 'Omiljeni'),
-      const MapEntry(Cat.recent, 'Nedavno gledano'),
       const MapEntry(Cat.all, 'Svi kanali'),
+      const MapEntry(Cat.favorites, 'Omiljeni'),
       ...s.catalog.liveCategories.map((c) => MapEntry(c.id, c.name)),
     ];
     return PopupMenuButton<String>(
       tooltip: 'Kategorija',
-      color: OrbitColors.surfaceHigh,
       onSelected: onChanged,
       itemBuilder: (_) => [for (final e in items) PopupMenuItem(value: e.key, child: Text(e.value))],
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(border: Border.all(color: OrbitColors.stroke), borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(color: Colors.white.o(0.08), border: Border.all(color: Colors.white.o(0.14)), borderRadius: BorderRadius.circular(12)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           const Icon(Icons.filter_list_rounded, size: 18),
           const SizedBox(width: 8),
-          ConstrainedBox(constraints: const BoxConstraints(maxWidth: 220), child: Text(s.catalog.categoryName(value), overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600))),
+          ConstrainedBox(constraints: const BoxConstraints(maxWidth: 200), child: Text(s.catalog.categoryName(value), overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700))),
           const Icon(Icons.expand_more_rounded),
         ]),
       ),
@@ -443,62 +554,43 @@ class ProgramDialog extends StatelessWidget {
       backgroundColor: OrbitColors.bgElevated,
       insetPadding: const EdgeInsets.all(40),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
         child: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            child: AspectRatio(
+            AspectRatio(
               aspectRatio: 21 / 9,
               child: Stack(fit: StackFit.expand, children: [
-                ProgramThumb(channel: channel, program: program),
+                ProgramThumb(channel: channel, program: program, large: true),
                 const DecoratedBox(decoration: BoxDecoration(gradient: OrbitColors.bottomFade)),
-                Positioned(left: 20, bottom: 16, child: ChannelLogo(name: channel.name, url: channel.logo, size: 56)),
+                Positioned(left: 20, bottom: 16, child: LogoBadge(channel: channel, size: 40)),
                 if (live) const Positioned(right: 18, top: 16, child: LiveBadge()),
               ]),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(program.title, style: TextStyles.h1),
-              const SizedBox(height: 6),
-              Text('${channel.name} · ${TimeFmt.dayLabel(program.start)} ${TimeFmt.range(program.start, program.end)} · ${TimeFmt.humanMinutes(program.duration)}', style: TextStyles.muted),
-              if (live) ...[const SizedBox(height: 10), ProgressLine(program.progressAt(now), height: 4)],
-              if (program.description.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                ConstrainedBox(constraints: const BoxConstraints(maxHeight: 160), child: SingleChildScrollView(child: Text(program.description, style: TextStyles.body.copyWith(color: OrbitColors.textMuted)))),
-              ],
-              const SizedBox(height: 22),
-              Wrap(spacing: 10, runSpacing: 10, children: [
-                if (live)
-                  ElevatedButton.icon(
-                    autofocus: true,
-                    onPressed: () => Navigator.pop(context, 'live'),
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text('Gledaj uživo'),
-                  ),
-                if (live && playable)
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.pop(context, 'archive'),
-                    icon: const Icon(Icons.replay_rounded),
-                    label: const Text('Od početka'),
-                  ),
-                if (past && playable)
-                  ElevatedButton.icon(
-                    autofocus: true,
-                    onPressed: () => Navigator.pop(context, 'archive'),
-                    icon: const Icon(Icons.history_rounded),
-                    label: const Text('Gledaj iz arhive'),
-                  ),
-                if (past && !playable) const Pill('Ova emisija nije u arhivi', icon: Icons.info_outline_rounded),
-                if (!live && !past) Pill('Počinje ${TimeFmt.dayLabel(program.start)} u ${TimeFmt.hm(program.start)}', icon: Icons.schedule_rounded),
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Zatvori')),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(program.title, style: TextStyles.h1),
+                const SizedBox(height: 6),
+                Text('${channel.name} · ${TimeFmt.dayLabel(program.start)} ${TimeFmt.range(program.start, program.end)} · ${TimeFmt.humanMinutes(program.duration)}', style: TextStyles.muted),
+                if (live) ...[const SizedBox(height: 10), ProgressLine(program.progressAt(now), height: 4)],
+                if (program.description.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  ConstrainedBox(constraints: const BoxConstraints(maxHeight: 160), child: SingleChildScrollView(child: Text(program.description, style: TextStyles.body.copyWith(color: OrbitColors.textMuted)))),
+                ],
+                const SizedBox(height: 22),
+                Wrap(spacing: 10, runSpacing: 10, children: [
+                  if (live) ElevatedButton.icon(autofocus: true, onPressed: () => Navigator.pop(context, 'live'), icon: const Icon(Icons.play_arrow_rounded), label: const Text('Gledaj uživo')),
+                  if (live && playable) OutlinedButton.icon(onPressed: () => Navigator.pop(context, 'archive'), icon: const Icon(Icons.replay_rounded), label: const Text('Od početka')),
+                  if (past && playable) ElevatedButton.icon(autofocus: true, onPressed: () => Navigator.pop(context, 'archive'), icon: const Icon(Icons.history_rounded), label: const Text('Gledaj iz arhive')),
+                  if (past && !playable) const Pill('Ova emisija nije u arhivi', icon: Icons.info_outline_rounded),
+                  if (!live && !past) Pill('Počinje ${TimeFmt.dayLabel(program.start)} u ${TimeFmt.hm(program.start)}', icon: Icons.schedule_rounded),
+                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Zatvori')),
+                ]),
               ]),
-            ]),
-          ),
-        ]),
+            ),
+          ]),
         ),
       ),
     );

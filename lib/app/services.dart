@@ -146,7 +146,7 @@ class AppServices extends ChangeNotifier {
         programAt: (c, t) => epg.at(c.id, t),
         ensureEpg: (c) => epg.ensureFull(c),
         onChannelStarted: (c) => prefs.markWatched(c.id),
-        onProgramFrame: (p, png) => thumbs.saveCaptured(p, png),
+        onProgramFrame: (p, png, large) => thumbs.saveCaptured(p, png, large),
         onResume: (r) => prefs.saveResume(r),
         grabPreview: (url, seek) => _grabPreview(url, seek),
         beforeOpen: () async {

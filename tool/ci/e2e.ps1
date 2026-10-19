@@ -1,6 +1,6 @@
-# Orbit TV end-to-end check on the CI runner: fake Xtream server + real app + keyboard/mouse,
+# Orbit Player end-to-end check on the CI runner: fake Xtream server + real app + keyboard/mouse,
 # screenshots saved to ci-logs/screens (published on the ci-logs branch).
-param([string]$Exe = "build\windows\x64\runner\Release\OrbitTV.exe")
+param([string]$Exe = "build\windows\x64\runner\Release\OrbitPlayer.exe")
 $ErrorActionPreference = 'Continue'
 $out = Join-Path (Get-Location) "ci-logs\screens"
 New-Item -ItemType Directory -Force $out | Out-Null
@@ -56,7 +56,7 @@ if (-not $app.HasExited) { Stop-Process -Id $app.Id -Force }
 Start-Sleep -Seconds 2
 
 # Saved account → the app signs in by itself (same file shared_preferences uses).
-$prefsDir = Join-Path $env:APPDATA "Orbitex FZE LLC\Orbit TV"
+$prefsDir = Join-Path $env:APPDATA "Orbitex FZE LLC\Orbit Player"
 New-Item -ItemType Directory -Force $prefsDir | Out-Null
 $account = '{"server":"http://127.0.0.1:8899","username":"ciuser","password":"cipass"}'
 @{ "flutter.account" = $account; "flutter.deviceId" = "win-ci-test" } | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $prefsDir "shared_preferences.json")
@@ -105,28 +105,41 @@ Keys "f" 2500
 Keys "{SCROLLLOCK}" 800
 Shot "11c-fullscreen"
 Keys "f" 2000
+# Mini guide of the channel: pick an earlier programme and play it from the archive.
+Keys "g" 2500
+Shot "11d-mini-guide"
+Keys "{LEFT}" 400; Keys "{LEFT}" 400
+Shot "11e-mini-guide-earlier"
+Keys "{ENTER}" 10000
+Keys "{SCROLLLOCK}" 800
+Shot "11f-playing-from-guide"
 Keys "a" 1200
 Shot "12-tracks"
 Keys "{ESC}" 600
 Keys "{ESC}" 2500
 Shot "13-back-home"
 
-# Sections from the sidebar (logical px; window maximized at its position).
-$items = @{ "14-live" = 1; "15-guide" = 2; "16-movies" = 3; "17-series" = 4; "18-search" = 5 }
-foreach ($k in ($items.Keys | Sort-Object)) {
-  $i = $items[$k]
-  Click-Rel 60 (142 + $i * 71)
+# Sections from the top menu (window maximized; x/y relative to the window rect).
+$menuY = 69
+$items = [ordered]@{ "14-live" = 399; "15-guide" = 498; "16-movies" = 592; "17-series" = 676; "18-search" = 839 }
+foreach ($k in $items.Keys) {
+  Click-Rel $items[$k] $menuY
   Start-Sleep -Seconds 6
   Shot $k
 }
-Click-Rel 60 ($([System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Height) - 60)
+Click-Rel 889 $menuY
 Start-Sleep -Seconds 3
 Shot "19-settings"
+Click-Rel 498 $menuY
+Start-Sleep -Seconds 3
+Click-Rel 640 560
+Start-Sleep -Seconds 2
+Shot "19b-guide-selected"
 
 # A movie from the movies grid.
-Click-Rel 60 (142 + 3 * 71)
+Click-Rel 592 $menuY
 Start-Sleep -Seconds 3
-Click-Rel 240 330
+Click-Rel 150 360
 Start-Sleep -Seconds 4
 Shot "20-movie-detail"
 Keys "{ENTER}" 10000

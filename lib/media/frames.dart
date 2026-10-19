@@ -14,25 +14,29 @@ import '../util/debouncer.dart';
 const int kThumbW = 320;
 const int kThumbH = 180;
 
+/// Big frames for hero banners and the guide's preview panel.
+const int kLargeW = 960;
+const int kLargeH = 540;
+
 /// Downscales a raw BGRA frame (mpv screenshot-raw) to [kThumbW]x[kThumbH] RGBA.
 /// [w]/[h] are the display size reported by the player; the frame itself may be narrower
 /// (anamorphic SD) and rows may be padded, so the row length is derived from the data.
-Uint8List? downscaleBgra(Uint8List bgra, int displayW, int h) {
+Uint8List? downscaleBgra(Uint8List bgra, int displayW, int h, {int outW = kThumbW, int outH = kThumbH}) {
   if (displayW < 2 || h < 2 || bgra.isEmpty) return null;
   final stride = bgra.length ~/ h;
   final w = math.min(displayW, stride ~/ 4);
   if (w < 2) return null;
-  final out = Uint8List(kThumbW * kThumbH * 4);
+  final out = Uint8List(outW * outH * 4);
   // Box-ish sampling: average 2x2 source pixels around each target point (cheap, avoids shimmer).
-  for (var y = 0; y < kThumbH; y++) {
-    final sy = ((y + 0.5) * h / kThumbH).floor().clamp(0, h - 2);
+  for (var y = 0; y < outH; y++) {
+    final sy = ((y + 0.5) * h / outH).floor().clamp(0, h - 2);
     final row0 = sy * stride;
     final row1 = row0 + stride;
-    for (var x = 0; x < kThumbW; x++) {
-      final sx = ((x + 0.5) * w / kThumbW).floor().clamp(0, w - 2);
+    for (var x = 0; x < outW; x++) {
+      final sx = ((x + 0.5) * w / outW).floor().clamp(0, w - 2);
       final i0 = row0 + sx * 4;
       final i1 = row1 + sx * 4;
-      final o = (y * kThumbW + x) * 4;
+      final o = (y * outW + x) * 4;
       out[o] = (bgra[i0 + 2] + bgra[i0 + 6] + bgra[i1 + 2] + bgra[i1 + 6]) >> 2; // R
       out[o + 1] = (bgra[i0 + 1] + bgra[i0 + 5] + bgra[i1 + 1] + bgra[i1 + 5]) >> 2; // G
       out[o + 2] = (bgra[i0] + bgra[i0 + 4] + bgra[i1] + bgra[i1 + 4]) >> 2; // B
@@ -120,6 +124,8 @@ class _Frame {
 class ThumbDiskCache {
   Directory? _dir;
   final _memory = Lru<String, Uint8List>(240);
+  final _memoryLarge = Lru<String, Uint8List>(10); // big frames ("L:" keys) are ~1 MB each
+  Lru<String, Uint8List> _mem(String key) => key.startsWith('L:') ? _memoryLarge : _memory;
   final _missing = <String>{};
 
   Future<Directory> _folder() async {
@@ -135,14 +141,14 @@ class ThumbDiskCache {
   String _name(String key) => md5.convert(utf8.encode(key)).toString();
 
   Future<Uint8List?> get(String key) async {
-    final m = _memory.get(key);
+    final m = _mem(key).get(key);
     if (m != null) return m;
     if (_missing.contains(key)) return null;
     try {
       final f = File('${(await _folder()).path}${Platform.pathSeparator}${_name(key)}.png');
       if (await f.exists()) {
         final b = await f.readAsBytes();
-        _memory.put(key, b);
+        _mem(key).put(key, b);
         return b;
       }
     } catch (_) {}
@@ -150,11 +156,11 @@ class ThumbDiskCache {
     return null;
   }
 
-  Uint8List? peek(String key) => _memory.get(key);
-  bool has(String key) => _memory.containsKey(key);
+  Uint8List? peek(String key) => _mem(key).get(key);
+  bool has(String key) => _mem(key).containsKey(key);
 
   Future<void> put(String key, Uint8List png) async {
-    _memory.put(key, png);
+    _mem(key).put(key, png);
     _missing.remove(key);
     try {
       final f = File('${(await _folder()).path}${Platform.pathSeparator}${_name(key)}.png');

@@ -1,6 +1,6 @@
-/// Build-time settings of the Orbit TV app.
+/// Build-time settings of the Orbit Player app.
 class AppConfig {
-  static const String appName = 'Orbit TV';
+  static const String appName = 'Orbit Player';
   static const String version = '1.0.0';
 
   /// OrbitModul platform used for "sign in with a code" (App API).
@@ -11,5 +11,5 @@ class AppConfig {
   static const String defaultStore = '';
 
   /// User-Agent sent to the IPTV server and the platform.
-  static const String userAgent = 'OrbitTV/1.0 (Windows)';
+  static const String userAgent = 'OrbitPlayer/1.0 (Windows)';
 }

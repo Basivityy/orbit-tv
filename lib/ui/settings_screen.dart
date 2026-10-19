@@ -71,7 +71,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       onSelectionChanged: (v) => onChanged(v.first),
       style: ButtonStyle(
         visualDensity: VisualDensity.compact,
-        backgroundColor: WidgetStateProperty.resolveWith((st) => st.contains(WidgetState.selected) ? OrbitColors.violet.o(0.35) : Colors.transparent),
+        backgroundColor: WidgetStateProperty.resolveWith((st) => st.contains(WidgetState.selected) ? OrbitColors.accent : Colors.transparent),
+        foregroundColor: WidgetStateProperty.resolveWith((st) => st.contains(WidgetState.selected) ? OrbitColors.onAccent : OrbitColors.text),
+        side: WidgetStatePropertyAll(BorderSide(color: Colors.white.o(0.16))),
       ),
     );
   }
@@ -151,7 +153,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _section('Pomoć', [
                 _row(
                   'Dnevnik rada (log)',
-                  'Ako neki kanal ne radi, pošalji prodavcu fajl orbit_tv.log iz ovog foldera.',
+                  'Ako neki kanal ne radi, pošalji prodavcu fajl orbit_player.log iz ovog foldera.',
                   OutlinedButton.icon(
                     onPressed: () async {
                       await Log.flush();
@@ -167,8 +169,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 InkWell(
                   onTap: () => setState(() => _advanced = !_advanced),
                   child: Row(children: [
-                    Text(_advanced ? 'Sakrij' : 'Prikaži', style: const TextStyle(color: OrbitColors.cyan, fontWeight: FontWeight.w600)),
-                    Icon(_advanced ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: OrbitColors.cyan),
+                    Text(_advanced ? 'Sakrij' : 'Prikaži', style: const TextStyle(color: OrbitColors.accent, fontWeight: FontWeight.w700)),
+                    Icon(_advanced ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: OrbitColors.accent),
                   ]),
                 ),
                 if (_advanced) ...[

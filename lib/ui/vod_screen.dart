@@ -60,9 +60,10 @@ class _Chip extends StatelessWidget {
         onTap: onTap,
         scale: 1.0,
         radius: 22,
-        color: active ? OrbitColors.violet.o(0.28) : OrbitColors.surface,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-        child: Text(label, style: TextStyle(fontWeight: active ? FontWeight.w700 : FontWeight.w500, fontSize: 13.5)),
+        color: active ? OrbitColors.accent : OrbitColors.surfaceHigh,
+        focusColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        child: Text(label, style: TextStyle(fontWeight: active ? FontWeight.w800 : FontWeight.w600, fontSize: 14, color: active ? OrbitColors.onAccent : OrbitColors.text)),
       ),
     );
   }

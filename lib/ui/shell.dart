@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
@@ -9,24 +11,27 @@ import 'search_screen.dart';
 import 'series_screen.dart';
 import 'settings_screen.dart';
 import 'vod_screen.dart';
+import 'widgets/common.dart';
+
+/// Height of the top navigation bar; pages leave this much room at the top.
+const double kTopBarH = 76;
 
 class _NavItem {
-  const _NavItem(this.icon, this.label);
-  final IconData icon;
+  const _NavItem(this.label, this.index);
   final String label;
+  final int index;
 }
 
-const _items = [
-  _NavItem(Icons.home_rounded, 'Početna'),
-  _NavItem(Icons.live_tv_rounded, 'TV uživo'),
-  _NavItem(Icons.view_timeline_rounded, 'TV vodič'),
-  _NavItem(Icons.movie_rounded, 'Filmovi'),
-  _NavItem(Icons.video_library_rounded, 'Serije'),
-  _NavItem(Icons.search_rounded, 'Pretraga'),
-  _NavItem(Icons.settings_rounded, 'Postavke'),
+/// Sections: 0 home, 1 live, 2 guide, 3 movies, 4 series, 5 search, 6 settings.
+const _menu = [
+  _NavItem('Početna', 0),
+  _NavItem('TV uživo', 1),
+  _NavItem('TV vodič', 2),
+  _NavItem('Filmovi', 3),
+  _NavItem('Serije', 4),
 ];
 
-/// Main layout: navigation on the left, the selected section on the right.
+/// Main layout (EON style): navigation bar on top, the selected section below/behind it.
 class Shell extends StatefulWidget {
   const Shell({super.key});
   static _ShellState? of(BuildContext context) => context.findAncestorStateOfType<_ShellState>();
@@ -66,66 +71,70 @@ class _ShellState extends State<Shell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Row(children: [
-        _Sidebar(index: _index, onSelect: go),
-        Expanded(
-          child: IndexedStack(index: _index, children: List.generate(_items.length, _page)),
+      body: Stack(children: [
+        // Home runs under the (transparent) bar; the other sections start below it.
+        Positioned.fill(
+          child: IndexedStack(
+            index: _index,
+            children: [
+              for (var i = 0; i < 7; i++)
+                Padding(padding: EdgeInsets.only(top: i == 0 ? 0 : kTopBarH), child: _page(i)),
+            ],
+          ),
         ),
+        Positioned(left: 0, right: 0, top: 0, child: _TopBar(index: _index, onSelect: go)),
       ]),
     );
   }
 }
 
-class _Sidebar extends StatelessWidget {
-  const _Sidebar({required this.index, required this.onSelect});
+class _TopBar extends StatelessWidget {
+  const _TopBar({required this.index, required this.onSelect});
   final int index;
   final ValueChanged<int> onSelect;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 104,
-      decoration: const BoxDecoration(
-        color: OrbitColors.bgElevated,
-        border: Border(right: BorderSide(color: OrbitColors.stroke, width: 1)),
+    final overHero = index == 0;
+    final bar = Container(
+      height: kTopBarH,
+      padding: const EdgeInsets.symmetric(horizontal: Gap.page - 8),
+      decoration: BoxDecoration(
+        gradient: overHero
+            ? const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xE6050505), Color(0x00050505)])
+            : null,
+        color: overHero ? null : OrbitColors.bg.o(0.82),
+        border: overHero ? null : Border(bottom: BorderSide(color: Colors.white.o(0.06))),
       ),
       child: FocusTraversalGroup(
-        // Scrolls only on very small windows; otherwise "Postavke" sits at the bottom.
-        child: LayoutBuilder(
-          builder: (context, box) => SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: box.maxHeight),
-              child: IntrinsicHeight(
-                child: Column(children: [
-                  const SizedBox(height: 20),
-                  const OrbitLogo(size: 36, showText: false),
-                  const SizedBox(height: 22),
-                  for (var i = 0; i < _items.length; i++) ...[
-                    if (i == _items.length - 1) const Spacer(),
-                    _SideButton(item: _items[i], active: i == index, onTap: () => onSelect(i)),
-                    const SizedBox(height: 4),
-                  ],
-                  const SizedBox(height: 14),
-                ]),
-              ),
-            ),
-          ),
-        ),
+        child: Row(children: [
+          const Padding(padding: EdgeInsets.only(left: 8, right: 28), child: OrbitLogo(size: 30)),
+          for (final m in _menu) _MenuButton(label: m.label, active: index == m.index, onTap: () => onSelect(m.index)),
+          const Spacer(),
+          _IconNav(icon: Icons.search_rounded, tooltip: 'Pretraga', active: index == 5, onTap: () => onSelect(5)),
+          const SizedBox(width: 6),
+          _IconNav(icon: Icons.settings_rounded, tooltip: 'Postavke', active: index == 6, onTap: () => onSelect(6)),
+          const SizedBox(width: 18),
+          const ClockText(style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: OrbitColors.text, fontFeatures: [ui.FontFeature.tabularFigures()])),
+          const SizedBox(width: 8),
+        ]),
       ),
     );
+    if (overHero) return bar;
+    return ClipRect(child: BackdropFilter(filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18), child: bar));
   }
 }
 
-class _SideButton extends StatefulWidget {
-  const _SideButton({required this.item, required this.active, required this.onTap});
-  final _NavItem item;
+class _MenuButton extends StatefulWidget {
+  const _MenuButton({required this.label, required this.active, required this.onTap});
+  final String label;
   final bool active;
   final VoidCallback onTap;
   @override
-  State<_SideButton> createState() => _SideButtonState();
+  State<_MenuButton> createState() => _MenuButtonState();
 }
 
-class _SideButtonState extends State<_SideButton> {
+class _MenuButtonState extends State<_MenuButton> {
   bool _hover = false;
   bool _focus = false;
 
@@ -146,25 +155,75 @@ class _SideButtonState extends State<_SideButton> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
-          width: 84,
-          padding: const EdgeInsets.symmetric(vertical: 9),
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: on ? OrbitColors.violet.o(0.18) : (_hover ? Colors.white.o(0.05) : Colors.transparent),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _focus ? OrbitColors.cyan : Colors.transparent, width: 2),
+            color: _focus ? OrbitColors.accent : (_hover && !on ? Colors.white.o(0.07) : Colors.transparent),
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Column(children: [
-            ShaderMask(
-              shaderCallback: (r) => (on ? OrbitColors.accentGradient : const LinearGradient(colors: [OrbitColors.textMuted, OrbitColors.textMuted])).createShader(r),
-              child: Icon(widget.item.icon, size: 26, color: Colors.white),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(
+              widget.label,
+              style: TextStyle(
+                fontSize: 15.5,
+                fontWeight: on ? FontWeight.w800 : FontWeight.w600,
+                color: _focus ? OrbitColors.onAccent : (on || _hover ? OrbitColors.text : OrbitColors.textMuted),
+              ),
             ),
             const SizedBox(height: 5),
-            Text(
-              widget.item.label,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11.5, fontWeight: on ? FontWeight.w700 : FontWeight.w500, color: on ? OrbitColors.text : OrbitColors.textMuted),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: on ? 22 : 0,
+              height: 3,
+              decoration: BoxDecoration(color: _focus ? OrbitColors.onAccent : OrbitColors.accent, borderRadius: BorderRadius.circular(2)),
             ),
           ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _IconNav extends StatefulWidget {
+  const _IconNav({required this.icon, required this.tooltip, required this.active, required this.onTap});
+  final IconData icon;
+  final String tooltip;
+  final bool active;
+  final VoidCallback onTap;
+  @override
+  State<_IconNav> createState() => _IconNavState();
+}
+
+class _IconNavState extends State<_IconNav> {
+  bool _hover = false;
+  bool _focus = false;
+  @override
+  Widget build(BuildContext context) {
+    final on = widget.active;
+    return Tooltip(
+      message: widget.tooltip,
+      child: FocusableActionDetector(
+        onShowHoverHighlight: (v) => setState(() => _hover = v),
+        onShowFocusHighlight: (v) => setState(() => _focus = v),
+        mouseCursor: SystemMouseCursors.click,
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
+            widget.onTap();
+            return null;
+          }),
+        },
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _focus || on ? OrbitColors.accent : (_hover ? Colors.white.o(0.14) : Colors.white.o(0.07)),
+            ),
+            child: Icon(widget.icon, size: 23, color: _focus || on ? OrbitColors.onAccent : OrbitColors.text),
+          ),
         ),
       ),
     );

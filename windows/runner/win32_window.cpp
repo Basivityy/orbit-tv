@@ -218,7 +218,7 @@ Win32Window::MessageHandler(HWND hwnd,
       return 0;
 
     case WM_GETMINMAXINFO: {
-      // Orbit TV: keep the window large enough for the TV guide and player.
+      // Orbit Player: keep the window large enough for the TV guide and player.
       auto info = reinterpret_cast<MINMAXINFO*>(lparam);
       const UINT dpi = FlutterDesktopGetDpiForMonitor(
           MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST));

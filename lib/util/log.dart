@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
-/// Small diagnostic log: memory ring + file "orbit_tv.log" in the app data folder
-/// (%APPDATA%\Orbitex FZE LLC\Orbit TV). Credentials in stream URLs are masked.
+/// Small diagnostic log: memory ring + file "orbit_player.log" in the app data folder
+/// (%APPDATA%\Orbitex FZE LLC\Orbit Player). Credentials in stream URLs are masked.
 class Log {
   static final List<String> _lines = [];
   static IOSink? _sink;
@@ -19,7 +19,7 @@ class Log {
     _opening = true;
     try {
       final dir = await getApplicationSupportDirectory();
-      final f = File('${dir.path}${Platform.pathSeparator}orbit_tv.log');
+      final f = File('${dir.path}${Platform.pathSeparator}orbit_player.log');
       // Keep the file small: start over when it gets big.
       if (await f.exists() && await f.length() > 2 * 1024 * 1024) await f.delete();
       _sink = f.openWrite(mode: FileMode.append);
@@ -58,7 +58,7 @@ class Log {
     }
   }
 
-  /// Folder with orbit_tv.log (for "open log folder").
+  /// Folder with orbit_player.log (for "open log folder").
   static Future<String?> folder() async {
     try {
       return (await getApplicationSupportDirectory()).path;

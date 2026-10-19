@@ -45,7 +45,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                             static_cast<unsigned int>(top));
   Win32Window::Size size(static_cast<unsigned int>(width),
                          static_cast<unsigned int>(height));
-  if (!window.Create(L"Orbit TV", origin, size)) {
+  if (!window.Create(L"Orbit Player", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

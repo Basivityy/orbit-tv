@@ -163,7 +163,7 @@ class _BarPainter extends CustomPainter {
       }
       canvas.restore();
       // Live edge marker
-      canvas.drawCircle(Offset(lx, y), active ? 5 : 4, Paint()..color = OrbitColors.live);
+      canvas.drawCircle(Offset(lx, y), active ? 5.5 : 4.5, Paint()..color = OrbitColors.live);
     }
 
     // Preview cursor
@@ -174,7 +174,7 @@ class _BarPainter extends CustomPainter {
 
     // Playhead knob
     canvas.drawCircle(Offset(px, y), active ? 9 : 7, Paint()..color = Colors.white);
-    canvas.drawCircle(Offset(px, y), active ? 4 : 3, Paint()..color = OrbitColors.violet);
+    canvas.drawCircle(Offset(px, y), active ? 4.5 : 3.5, Paint()..color = OrbitColors.accentDeep);
   }
 
   @override

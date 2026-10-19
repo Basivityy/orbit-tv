@@ -94,11 +94,11 @@ class _LoginScreenState extends State<LoginScreen> {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            gradient: active ? OrbitColors.accentGradient : null,
+            color: active ? OrbitColors.accent : null,
             borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
-          child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, color: active ? Colors.white : OrbitColors.textMuted)),
+          child: Text(label, style: TextStyle(fontWeight: FontWeight.w800, color: active ? OrbitColors.onAccent : OrbitColors.textMuted)),
         ),
       ),
     );
@@ -109,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: RadialGradient(center: Alignment(-0.7, -0.9), radius: 1.5, colors: [Color(0xFF231A5C), OrbitColors.bg]),
+          gradient: RadialGradient(center: Alignment(-0.8, -0.9), radius: 1.6, colors: [Color(0xFF3A3104), Color(0xFF0B0A05), OrbitColors.bg], stops: [0, 0.55, 1]),
         ),
         child: Row(children: [
           // Left: brand panel.
@@ -228,7 +228,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: _busy ? null : _submit,
                           child: _busy
                               ? Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                                  const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white)),
+                                  const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.4, color: OrbitColors.onAccent)),
                                   const SizedBox(width: 12),
                                   Flexible(child: Text(_progress ?? 'Prijavljujem…', overflow: TextOverflow.ellipsis)),
                                 ])
@@ -258,7 +258,7 @@ class _Feature extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(color: Colors.white.o(0.06), borderRadius: BorderRadius.circular(30), border: Border.all(color: Colors.white.o(0.08))),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 17, color: OrbitColors.cyan),
+        Icon(icon, size: 17, color: OrbitColors.accent),
         const SizedBox(width: 8),
         Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
       ]),

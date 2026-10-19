@@ -118,7 +118,7 @@ class _Splash extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        gradient: RadialGradient(center: Alignment(-0.6, -0.8), radius: 1.4, colors: [Color(0xFF1A1442), OrbitColors.bg]),
+        gradient: RadialGradient(center: Alignment(-0.6, -0.8), radius: 1.4, colors: [Color(0xFF2A2405), OrbitColors.bg]),
       ),
       child: Column(children: [
         const SizedBox(height: 60),
@@ -129,7 +129,7 @@ class _Splash extends StatelessWidget {
   }
 }
 
-/// Wordmark: orbit ring + "Orbit TV".
+/// Wordmark: orbit ring + "Orbit Player".
 class OrbitLogo extends StatelessWidget {
   const OrbitLogo({super.key, this.size = 32, this.showText = true});
   final double size;
@@ -140,11 +140,8 @@ class OrbitLogo extends StatelessWidget {
       SizedBox(width: size, height: size, child: CustomPaint(painter: _OrbitMark())),
       if (showText) ...[
         SizedBox(width: size * 0.32),
-        ShaderMask(
-          shaderCallback: (r) => OrbitColors.accentGradient.createShader(r),
-          child: Text('Orbit', style: TextStyle(fontSize: size * 0.72, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.5)),
-        ),
-        Text(' TV', style: TextStyle(fontSize: size * 0.72, fontWeight: FontWeight.w300, color: OrbitColors.text, letterSpacing: -0.5)),
+        Text('Orbit', style: TextStyle(fontSize: size * 0.74, fontWeight: FontWeight.w900, color: OrbitColors.text, letterSpacing: -0.6, height: 1)),
+        Text(' Player', style: TextStyle(fontSize: size * 0.74, fontWeight: FontWeight.w900, color: OrbitColors.accent, letterSpacing: -0.6, height: 1)),
       ],
     ]);
   }
@@ -165,7 +162,7 @@ class _OrbitMark extends CustomPainter {
     canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: r * 2, height: r * 1.1), ring);
     canvas.restore();
     canvas.drawCircle(c, r * 0.36, Paint()..color = OrbitColors.text);
-    canvas.drawCircle(c + Offset(r * 0.82, -r * 0.38), r * 0.14, Paint()..color = OrbitColors.cyan);
+    canvas.drawCircle(c + Offset(r * 0.82, -r * 0.38), r * 0.15, Paint()..color = OrbitColors.accent);
   }
 
   @override
