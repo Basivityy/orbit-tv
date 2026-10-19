@@ -44,6 +44,17 @@ function Click-Rel([double]$x, [double]$y) {
   Start-Sleep -Milliseconds 500
 }
 
+# First start without an account: the sign-in screen.
+$script:app = Start-Process -FilePath $Exe -PassThru
+Start-Sleep -Seconds 15
+Shot "00-login"
+Keys "{TAB}" 300
+Click-Rel 700 300
+Shot "00b-login-userpass"
+if (-not $app.HasExited) { $app.CloseMainWindow() | Out-Null; Start-Sleep -Seconds 3 }
+if (-not $app.HasExited) { Stop-Process -Id $app.Id -Force }
+Start-Sleep -Seconds 2
+
 # Saved account → the app signs in by itself (same file shared_preferences uses).
 $prefsDir = Join-Path $env:APPDATA "Orbitex FZE LLC\Orbit TV"
 New-Item -ItemType Directory -Force $prefsDir | Out-Null
@@ -90,6 +101,10 @@ Keys "{SCROLLLOCK}" 800
 Shot "11-number-3-interlaced"
 Keys "{UP}" 9000
 Shot "11b-zap-up"
+Keys "f" 2500
+Keys "{SCROLLLOCK}" 800
+Shot "11c-fullscreen"
+Keys "f" 2000
 Keys "a" 1200
 Shot "12-tracks"
 Keys "{ESC}" 600

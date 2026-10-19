@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../app/config.dart';
 import '../app/services.dart';
 import '../app/theme.dart';
+import '../util/log.dart';
 import '../util/time_fmt.dart';
 import 'widgets/common.dart';
 
@@ -124,7 +127,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   st.hardwareDecoding = v;
                   _save();
                 })),
-                _row('Deinterlace', 'Uklanja "češljanje" slike na sportskim i HD kanalima.', Switch(value: st.deinterlace, onChanged: (v) {
+                _row('Deinterlace', 'Uklanja "češljanje" slike na kanalima koji šalju 1080i/576i (uključuje se samo na njima). Radi uz hardversko dekodiranje.', Switch(value: st.deinterlace, onChanged: (v) {
                   st.deinterlace = v;
                   _save();
                 })),
@@ -143,6 +146,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     st.archiveThumbs = v;
                     _save();
                   }),
+                ),
+              ]),
+              _section('Pomoć', [
+                _row(
+                  'Dnevnik rada (log)',
+                  'Ako neki kanal ne radi, pošalji prodavcu fajl orbit_tv.log iz ovog foldera.',
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await Log.flush();
+                      final dir = await Log.folder();
+                      if (dir != null && Platform.isWindows) await Process.run('explorer.exe', [dir]);
+                    },
+                    icon: const Icon(Icons.folder_open_rounded),
+                    label: const Text('Otvori folder'),
+                  ),
                 ),
               ]),
               _section('Napredno', [

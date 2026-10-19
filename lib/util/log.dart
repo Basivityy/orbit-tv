@@ -58,6 +58,15 @@ class Log {
     }
   }
 
+  /// Folder with orbit_tv.log (for "open log folder").
+  static Future<String?> folder() async {
+    try {
+      return (await getApplicationSupportDirectory()).path;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<void> flush() async {
     try {
       await _sink?.flush();
