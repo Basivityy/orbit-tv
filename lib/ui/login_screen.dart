@@ -122,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Spacer(),
                 const Text('Televizija kad tebi\nodgovara.', style: TextStyles.display),
                 const SizedBox(height: 18),
-                const Text('Uživo, unazad 7 dana, od početka emisije, filmovi i serije —\nsve na jednom mjestu.', style: TextStyle(fontSize: 17, color: OrbitColors.textMuted, height: 1.5)),
+                const Text('Uživo, unazad 7 dana, od početka emisije, filmovi i serije — sve na jednom mjestu.', style: TextStyle(fontSize: 17, color: OrbitColors.textMuted, height: 1.5)),
                 const SizedBox(height: 28),
                 Wrap(spacing: 10, runSpacing: 10, children: const [
                   _Feature(Icons.live_tv_rounded, 'TV uživo'),

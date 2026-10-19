@@ -738,9 +738,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
           const SizedBox(height: 12),
         ],
         ExcludeFocus(
-          child: Row(children: [
+          child: LayoutBuilder(builder: (context, box) {
+            // Narrow windows: icon-only buttons and no volume slider, so nothing overflows.
+            final narrow = box.maxWidth < 1120;
+            return Row(children: [
             if (e.isTv) ...[
-              _PillButton(label: 'Od početka', icon: Icons.replay_rounded, onTap: e.restartProgram),
+              narrow
+                  ? _RoundButton(icon: Icons.replay_rounded, tooltip: 'Od početka (Home)', onTap: e.restartProgram)
+                  : _PillButton(label: 'Od početka', icon: Icons.replay_rounded, onTap: e.restartProgram),
               const SizedBox(width: 10),
               _RoundButton(icon: Icons.skip_previous_rounded, tooltip: 'Prethodna emisija', onTap: e.previousProgram),
               const SizedBox(width: 8),
@@ -756,14 +761,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
             ],
             if (e.kind == PlayKind.episode && e.nextEpisode != null) ...[
               const SizedBox(width: 8),
-              _PillButton(label: 'Sljedeća epizoda', icon: Icons.skip_next_rounded, onTap: () => e.playEpisode(e.series!, e.nextEpisode!, e.episodes)),
+              narrow
+                  ? _RoundButton(icon: Icons.skip_next_rounded, tooltip: 'Sljedeća epizoda', onTap: () => e.playEpisode(e.series!, e.nextEpisode!, e.episodes))
+                  : _PillButton(label: 'Sljedeća epizoda', icon: Icons.skip_next_rounded, onTap: () => e.playEpisode(e.series!, e.nextEpisode!, e.episodes)),
             ],
             if (e.isTv && !e.atLiveEdge) ...[
               const SizedBox(width: 10),
               _PillButton(label: 'UŽIVO', icon: Icons.fiber_manual_record_rounded, color: OrbitColors.live, onTap: e.goLive),
             ],
             const Spacer(),
-            _VolumeControl(engine: e),
+            _VolumeControl(engine: e, compact: narrow),
             const SizedBox(width: 8),
             if (e.isTv) ...[
               _RoundButton(icon: Icons.view_carousel_rounded, tooltip: 'Vodič kanala (G)', onTap: () => _setPanel(_Panel.guide)),
@@ -784,7 +791,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
             _RoundButton(icon: Icons.tune_rounded, tooltip: 'Zvuk, titlovi i slika (A)', onTap: () => _setPanel(_Panel.tracks)),
             const SizedBox(width: 8),
             _RoundButton(icon: _fullscreen ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded, tooltip: 'Cijeli ekran (F)', onTap: _toggleFullscreen),
-          ]),
+            ]);
+          }),
         ),
         if (e.isTv)
           Padding(
@@ -1176,16 +1184,19 @@ class _PillButtonState extends State<_PillButton> {
 }
 
 class _VolumeControl extends StatelessWidget {
-  const _VolumeControl({required this.engine});
+  const _VolumeControl({required this.engine, this.compact = false});
   final PlayerEngine engine;
+  final bool compact;
   @override
   Widget build(BuildContext context) {
     final v = engine.player.state.volume;
     return Row(mainAxisSize: MainAxisSize.min, children: [
       IconButton(
+        tooltip: 'Zvuk (M, + / −, točkić miša)',
         onPressed: () => engine.setVolume(v > 0 ? 0 : 100),
         icon: Icon(v <= 0 ? Icons.volume_off_rounded : (v < 50 ? Icons.volume_down_rounded : Icons.volume_up_rounded)),
       ),
+      if (!compact)
       SizedBox(
         width: 110,
         child: SliderTheme(

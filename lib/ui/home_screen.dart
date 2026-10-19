@@ -292,8 +292,10 @@ class _HeroCarouselState extends State<_HeroCarousel> {
         if (n > 1)
           Positioned(
             right: Gap.page,
-            bottom: 44,
+            bottom: 60,
             child: Row(children: [
+              _ArrowButton(icon: Icons.chevron_left_rounded, onTap: () => _go(-1)),
+              const SizedBox(width: 6),
               for (var k = 0; k < n; k++)
                 GestureDetector(
                   onTap: () => setState(() => _i = k),
@@ -308,12 +310,10 @@ class _HeroCarouselState extends State<_HeroCarousel> {
                     ),
                   ),
                 ),
+              const SizedBox(width: 12),
+              _ArrowButton(icon: Icons.chevron_right_rounded, onTap: () => _go(1)),
             ]),
           ),
-        if (n > 1 && _hover) ...[
-          Positioned(left: 14, top: 0, bottom: 0, child: Center(child: _ArrowButton(icon: Icons.chevron_left_rounded, onTap: () => _go(-1)))),
-          Positioned(right: 14, top: 0, bottom: 0, child: Center(child: _ArrowButton(icon: Icons.chevron_right_rounded, onTap: () => _go(1)))),
-        ],
       ]),
     );
   }
@@ -330,10 +330,10 @@ class _ArrowButton extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(color: Colors.black.o(0.5), shape: BoxShape.circle, border: Border.all(color: Colors.white.o(0.15))),
-          child: Icon(icon, size: 30),
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(color: Colors.black.o(0.5), shape: BoxShape.circle, border: Border.all(color: Colors.white.o(0.18))),
+          child: Icon(icon, size: 26),
         ),
       ),
     );

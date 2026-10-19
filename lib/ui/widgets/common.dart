@@ -417,25 +417,47 @@ class GlassPanel extends StatelessWidget {
 }
 
 /// Horizontal category chips (EON style): "Svi", "Omiljeni", categories…
-class ChipBar extends StatelessWidget {
+/// The selected chip is scrolled into view when the bar appears.
+class ChipBar extends StatefulWidget {
   const ChipBar({super.key, required this.items, required this.selected, required this.onSelect, this.padding = const EdgeInsets.symmetric(horizontal: Gap.page)});
   final List<(String, String)> items; // (id, label)
   final String selected;
   final ValueChanged<String> onSelect;
   final EdgeInsets padding;
   @override
+  State<ChipBar> createState() => _ChipBarState();
+}
+
+class _ChipBarState extends State<ChipBar> {
+  final _selKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _selKey.currentContext;
+      if (ctx != null && mounted) Scrollable.ensureVisible(ctx, alignment: 0.5, duration: const Duration(milliseconds: 1));
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final items = widget.items;
+    final selected = widget.selected;
+    final onSelect = widget.onSelect;
     return SizedBox(
       height: 46,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: padding,
+        cacheExtent: 3000, // build all chips so the selected one can be scrolled to
+        padding: widget.padding,
         itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
           final (id, label) = items[i];
           final on = id == selected;
           return FocusTile(
+            key: on ? _selKey : null,
             onTap: () => onSelect(id),
             scale: 1.0,
             radius: 23,
