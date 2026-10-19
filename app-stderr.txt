@@ -1,0 +1,3 @@
+Failed to get default audio endpoint: -2147023728
+Failed to get default audio endpoint: -2147023728
+Cannot load nvcuda.dll

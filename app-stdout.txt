@@ -1,0 +1,41 @@
+package:media_kit_libs_windows_video registered.
+media_kit: ANGLESurfaceManager: Direct3D Feature Level: 11_0
+1 1
+media_kit: VideoOutput: Create Texture: 2298597810832
+media_kit: VideoOutput: Using H/W rendering.
+flutter: VideoOutput.Resize
+flutter: {handle: 2298596266608, id: 2298597810832, rect: {height: 0, left: 0, top: 0, width: 0}}
+flutter: NativeVideoController: Texture ID: 2298597810832
+media_kit: VideoOutput: Using S/W rendering.
+320 180
+media_kit: VideoOutput: Create Texture: 2298659752992
+flutter: VideoOutput.Resize
+flutter: {handle: 2298654017264, id: 2298659752992, rect: {height: 180, left: 0, top: 0, width: 320}}
+flutter: NativeVideoController: Texture ID: 2298659752992
+1280 720
+media_kit: VideoOutput: Create Texture: 2298659762208media_kit: VideoOutput: Free Texture: 
+2298659752992
+flutter: VideoOutput.Resize
+flutter: {handle: 2298654017264, id: 2298659762208, rect: {height: 720, left: 0, top: 0, width: 1280}}
+1280 720
+media_kit: VideoOutput: Free Texture: 2298597810832
+media_kit: ANGLESurfaceManager: Direct3D Feature Level: 11_0
+media_kit: VideoOutput: Create Texture: 2298595793968
+flutter: VideoOutput.Resize
+flutter: {handle: 2298596266608, id: 2298595793968, rect: {height: 720, left: 0, top: 0, width: 1280}}
+720 576
+media_kit: ANGLESurfaceManager: Direct3D Feature Level: 11_0
+media_kit: VideoOutput: Create Texture: 2298816526688
+flutter: VideoOutput.Resize
+flutter: {handle: 2298596266608, id: 2298816526688, rect: {height: 576, left: 0, top: 0, width: 720}}
+media_kit: VideoOutput: Free Texture: 2298595793968
+1280 720
+media_kit: ANGLESurfaceManager: Direct3D Feature Level: 11_0
+media_kit: VideoOutput: Free Texture: 2298816526688
+media_kit: VideoOutput: Create Texture: 2298816535424
+flutter: VideoOutput.Resize
+flutter: {handle: 2298596266608, id: 2298816535424, rect: {height: 720, left: 0, top: 0, width: 1280}}
+media_kit: VideoOutput: Free Texture: 2298816535424
+VideoOutput::~VideoOutput: 2298596266608
+media_kit: VideoOutput: Free Texture: 2298659762208
+VideoOutput::~VideoOutput: 2298654017264

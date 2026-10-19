@@ -1,0 +1,131 @@
+[fake] listening on 8899
+[fake] "GET /player_api.php?username=nolicense&password=x HTTP/1.1" 200 -
+[fake] POST /api/app/v1/player/check client=orbit-player user=nolicense
+[fake] "POST /api/app/v1/player/check HTTP/1.1" 404 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass HTTP/1.1" 200 -
+[fake] POST /api/app/v1/player/check client=orbit-player user=ciuser
+[fake] "POST /api/app/v1/player/check HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_live_categories HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_live_streams HTTP/1.1" 200 -
+[fake] "GET /xmltv.php?username=ciuser&password=cipass HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_short_epg&stream_id=101&limit=8 HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_short_epg&stream_id=102&limit=8 HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_short_epg&stream_id=103&limit=8 HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_short_epg&stream_id=104&limit=8 HTTP/1.1" 200 -
+[fake] "GET /logo/101.png HTTP/1.1" 200 -
+[fake] "GET /logo/101.png HTTP/1.1" 200 -
+[fake] "GET /logo/101.png HTTP/1.1" 200 -
+[fake] "GET /logo/102.png HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_short_epg&stream_id=105&limit=8 HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_simple_data_table&stream_id=102 HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_simple_data_table&stream_id=101 HTTP/1.1" 200 -
+[fake] "GET /logo/103.png HTTP/1.1" 200 -
+[fake] "GET /epgimg/2.png HTTP/1.1" 200 -
+[fake] "GET /epgimg/2.png HTTP/1.1" 200 -
+[fake] "GET /epgimg/4.png HTTP/1.1" 200 -
+[fake] "GET /epgimg/1.png HTTP/1.1" 200 -
+[fake] "GET /epgimg/3.png HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass HTTP/1.1" 200 -
+[fake] "GET /live/ciuser/cipass/105.ts HTTP/1.1" 200 -
+[fake] "GET /logo/105.png HTTP/1.1" 200 -
+[fake] "GET /logo/104.png HTTP/1.1" 200 -
+[fake] "GET /logo/102.png HTTP/1.1" 200 -
+[fake] "GET /logo/105.png HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_vod_categories HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_vod_streams HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_series HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_series_categories HTTP/1.1" 200 -
+[fake] "GET /logo/m1.png HTTP/1.1" 200 -
+[fake] "GET /logo/m2.png HTTP/1.1" 200 -
+[fake] "GET /logo/m4.png HTTP/1.1" 200 -
+[fake] "GET /logo/m6.png HTTP/1.1" 200 -
+[fake] "GET /logo/m3.png HTTP/1.1" 200 -
+[fake] "GET /logo/s.png HTTP/1.1" 200 -
+[fake] "GET /logo/m5.png HTTP/1.1" 200 -
+[fake] "GET /logo/m7.png HTTP/1.1" 200 -
+[fake] "GET /logo/101.png HTTP/1.1" 200 -
+[fake] "GET /logo/101.png HTTP/1.1" 200 -
+[fake] "GET /logo/102.png HTTP/1.1" 200 -
+[fake] "GET /logo/105.png HTTP/1.1" 200 -
+[fake] "GET /live/ciuser/cipass/101.ts HTTP/1.1" 200 -
+[fake] "GET /logo/102.png HTTP/1.1" 200 -
+[fake] "GET /epgimg/3.png HTTP/1.1" 200 -
+[fake] "GET /logo/101.png HTTP/1.1" 200 -
+[fake] TIMESHIFT duration=3 start=2026-10-19:17-51 stream=101
+[fake] "GET /timeshift/ciuser/cipass/3/2026-10-19:17-51/101.ts HTTP/1.1" 206 -
+[fake] TIMESHIFT duration=3 start=2026-10-19:17-51 stream=101
+[fake] "GET /timeshift/ciuser/cipass/3/2026-10-19:17-51/101.ts HTTP/1.1" 206 -
+[fake] TIMESHIFT duration=3 start=2026-10-19:17-51 stream=101
+[fake] "GET /timeshift/ciuser/cipass/3/2026-10-19:17-51/101.ts HTTP/1.1" 206 -
+[fake] "GET /logo/103.png HTTP/1.1" 200 -
+[fake] "GET /epgimg/4.png HTTP/1.1" 200 -
+[fake] TIMESHIFT duration=24 start=2026-10-19:17-30 stream=101
+[fake] "GET /timeshift/ciuser/cipass/24/2026-10-19:17-30/101.ts HTTP/1.1" 206 -
+[fake] TIMESHIFT duration=24 start=2026-10-19:17-30 stream=101
+[fake] "GET /timeshift/ciuser/cipass/24/2026-10-19:17-30/101.ts HTTP/1.1" 206 -
+[fake] TIMESHIFT duration=24 start=2026-10-19:17-30 stream=101
+[fake] "GET /timeshift/ciuser/cipass/24/2026-10-19:17-30/101.ts HTTP/1.1" 206 -
+[fake] "GET /epgimg/1.png HTTP/1.1" 200 -
+[fake] "GET /logo/104.png HTTP/1.1" 200 -
+[fake] "GET /logo/105.png HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass HTTP/1.1" 200 -
+[fake] "GET /live/ciuser/cipass/105.ts HTTP/1.1" 200 -
+[fake] TIMESHIFT duration=25 start=2026-10-19:17-29 stream=101
+[fake] "GET /timeshift/ciuser/cipass/25/2026-10-19:17-29/101.ts HTTP/1.1" 206 -
+[fake] TIMESHIFT duration=25 start=2026-10-19:17-29 stream=101
+[fake] "GET /timeshift/ciuser/cipass/25/2026-10-19:17-29/101.ts HTTP/1.1" 206 -
+[fake] TIMESHIFT duration=25 start=2026-10-19:17-29 stream=101
+[fake] "GET /timeshift/ciuser/cipass/25/2026-10-19:17-29/101.ts HTTP/1.1" 206 -
+[fake] "GET /live/ciuser/cipass/101.ts HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_simple_data_table&stream_id=105 HTTP/1.1" 200 -
+[fake] "GET /logo/105.png HTTP/1.1" 200 -
+[fake] "GET /live/ciuser/cipass/105.ts HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_simple_data_table&stream_id=103 HTTP/1.1" 200 -
+[fake] "GET /logo/103.png HTTP/1.1" 200 -
+[fake] "GET /logo/103.png HTTP/1.1" 200 -
+[fake] "GET /logo/103.png HTTP/1.1" 200 -
+[fake] "GET /logo/104.png HTTP/1.1" 200 -
+[fake] "GET /live/ciuser/cipass/103.ts HTTP/1.1" 200 -
+[fake] "GET /logo/104.png HTTP/1.1" 200 -
+[fake] "GET /logo/104.png HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_simple_data_table&stream_id=104 HTTP/1.1" 200 -
+[fake] "GET /live/ciuser/cipass/104.ts HTTP/1.1" 200 -
+[fake] TIMESHIFT duration=85 start=2026-10-19:16-30 stream=104
+[fake] "GET /timeshift/ciuser/cipass/85/2026-10-19:16-30/104.ts HTTP/1.1" 206 -
+[fake] TIMESHIFT duration=85 start=2026-10-19:16-30 stream=104
+[fake] "GET /timeshift/ciuser/cipass/85/2026-10-19:16-30/104.ts HTTP/1.1" 206 -
+[fake] TIMESHIFT duration=85 start=2026-10-19:16-30 stream=104
+[fake] "GET /timeshift/ciuser/cipass/85/2026-10-19:16-30/104.ts HTTP/1.1" 206 -
+[fake] "GET /logo/102.png HTTP/1.1" 200 -
+[fake] "GET /logo/101.png HTTP/1.1" 200 -
+[fake] "GET /logo/103.png HTTP/1.1" 200 -
+[fake] "GET /logo/104.png HTTP/1.1" 200 -
+[fake] "GET /logo/105.png HTTP/1.1" 200 -
+[fake] "GET /logo/101.png HTTP/1.1" 200 -
+[fake] "GET /logo/101.png HTTP/1.1" 200 -
+[fake] "GET /logo/104.png HTTP/1.1" 200 -
+[fake] "GET /logo/103.png HTTP/1.1" 200 -
+[fake] "GET /logo/105.png HTTP/1.1" 200 -
+[fake] "GET /logo/102.png HTTP/1.1" 200 -
+[fake] "GET /logo/m8.png HTTP/1.1" 200 -
+[fake] "GET /logo/102.png HTTP/1.1" 200 -
+[fake] "GET /logo/m1.png HTTP/1.1" 200 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass&action=get_vod_info&vod_id=501 HTTP/1.1" 200 -
+[fake] "GET /logo/m1.png HTTP/1.1" 200 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /player_api.php?username=ciuser&password=cipass HTTP/1.1" 200 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /movie/ciuser/cipass/501.ts HTTP/1.1" 206 -
+[fake] "GET /logo/m1.png HTTP/1.1" 200 -

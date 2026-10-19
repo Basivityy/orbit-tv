@@ -1,0 +1,151 @@
+---- start 2026-10-19T16:51:00.137206 ----
+16:51:00.047 Orbit Player 1.2.0 starting
+---- start 2026-10-19T16:51:22.223133 ----
+16:51:22.208 Orbit Player 1.2.0 starting
+16:51:22.210 sign in http://127.0.0.1:8899
+16:51:22.236 player check: not_licensed Ova linija nije registrovana za Orbit Player. Prijavi se kodom od prodavca ili mu se javi.
+---- start 2026-10-19T16:51:42.290478 ----
+16:51:42.276 Orbit Player 1.2.0 starting
+16:51:42.278 sign in http://127.0.0.1:8899
+16:51:42.298 player check ok
+16:51:42.298 account Active, max connections 2, server clock offset 60 min
+16:51:42.301 5 channels in 2 categories
+16:51:42.551 xmltv http://127.0.0.1:8899/xmltv.php?username=***&password=*** 90 programme pictures, 5 channel names
+16:51:42.552 xmltv pictures: 90 programmes on 3 channels
+16:52:10.597 open live http://127.0.0.1:8899/live/***/***/101.ts
+16:52:10.646 [mpv] … 124 similar/decoder messages
+16:52:10.646 [mpv warn] playlist: Reading plaintext playlist.
+16:52:10.661 [mpv] … 140 similar/decoder messages
+16:52:10.661 [mpv warn] demux: Not seekable, but enabling seeking on user request.
+16:52:10.680 [mpv error] vd: Failed to allocate AVHWDeviceContext.
+16:52:10.757 [mpv error] ffmpeg: AVHWFramesContext: Could not create the surfaces
+16:52:10.758 [mpv error] ffmpeg: AVHWFramesContext: Error creating an internal frame pool
+16:52:10.758 [mpv] … 2 similar/decoder messages
+16:52:10.758 [mpv error] ffmpeg: AVHWDeviceContext: Cannot load nvcuda.dll
+16:52:10.758 [mpv error] ffmpeg: AVHWDeviceContext: Could not dynamically load CUDA
+16:52:10.758 [mpv] … 1 similar/decoder messages
+16:52:10.758 [mpv error] ao/wasapi: There are no playback devices available
+16:52:10.758 [mpv error] ao: Failed to initialize audio driver 'wasapi'
+16:52:10.758 [mpv error] cplayer: Could not open/initialize audio device -> no sound.
+16:52:26.374 plan OpenArchive on Orbit Info
+16:52:26.374 open archive http://127.0.0.1:8899/timeshift/***/***/3/2026-10-19:17-51/101.ts skip=24s
+16:52:26.447 [mpv warn] playlist: Reading plaintext playlist.
+16:52:26.499 [mpv error] vd: Failed to allocate AVHWDeviceContext.
+16:52:26.501 [mpv error] ffmpeg: AVHWFramesContext: Could not create the surfaces
+16:52:26.501 [mpv error] ffmpeg: AVHWFramesContext: Error creating an internal frame pool
+16:52:26.508 [mpv] … 1 similar/decoder messages
+16:52:26.508 [mpv error] ffmpeg: AVHWDeviceContext: Cannot load nvcuda.dll
+16:52:26.508 [mpv error] ffmpeg: AVHWDeviceContext: Could not dynamically load CUDA
+16:52:26.520 [mpv error] ao/wasapi: There are no playback devices available
+16:52:26.520 [mpv error] ao: Failed to initialize audio driver 'wasapi'
+16:52:26.520 [mpv error] cplayer: Could not open/initialize audio device -> no sound.
+16:52:35.145 plan OpenArchive on Orbit Info
+16:52:35.146 open archive http://127.0.0.1:8899/timeshift/***/***/24/2026-10-19:17-30/101.ts skip=0s
+16:52:35.189 [mpv warn] playlist: Reading plaintext playlist.
+16:52:35.224 [mpv error] vd: Failed to allocate AVHWDeviceContext.
+16:52:35.229 [mpv error] ffmpeg: AVHWFramesContext: Could not create the surfaces
+16:52:35.229 [mpv error] ffmpeg: AVHWFramesContext: Error creating an internal frame pool
+16:52:35.235 [mpv] … 1 similar/decoder messages
+16:52:35.235 [mpv error] ffmpeg: AVHWDeviceContext: Cannot load nvcuda.dll
+16:52:35.235 [mpv error] ffmpeg: AVHWDeviceContext: Could not dynamically load CUDA
+16:52:35.252 [mpv error] ao/wasapi: There are no playback devices available
+16:52:35.252 [mpv error] ao: Failed to initialize audio driver 'wasapi'
+16:52:35.253 [mpv error] cplayer: Could not open/initialize audio device -> no sound.
+16:52:50.353 plan OpenArchive on Orbit Info
+16:52:50.353 open archive http://127.0.0.1:8899/timeshift/***/***/25/2026-10-19:17-29/101.ts skip=43s
+16:52:50.398 [mpv] … 37 similar/decoder messages
+16:52:50.398 [mpv warn] playlist: Reading plaintext playlist.
+16:52:50.451 [mpv error] vd: Failed to allocate AVHWDeviceContext.
+16:52:50.452 [mpv error] ffmpeg: AVHWFramesContext: Could not create the surfaces
+16:52:50.452 [mpv error] ffmpeg: AVHWFramesContext: Error creating an internal frame pool
+16:52:50.459 [mpv] … 1 similar/decoder messages
+16:52:50.459 [mpv error] ffmpeg: AVHWDeviceContext: Cannot load nvcuda.dll
+16:52:50.459 [mpv error] ffmpeg: AVHWDeviceContext: Could not dynamically load CUDA
+16:52:50.475 [mpv error] ao/wasapi: There are no playback devices available
+16:52:50.475 [mpv error] ao: Failed to initialize audio driver 'wasapi'
+16:52:50.475 [mpv error] cplayer: Could not open/initialize audio device -> no sound.
+16:52:55.989 plan GoLive on Orbit Info
+16:52:55.989 open live http://127.0.0.1:8899/live/***/***/101.ts
+16:52:56.031 [mpv warn] playlist: Reading plaintext playlist.
+16:52:56.064 [mpv] … 4 similar/decoder messages
+16:52:56.064 [mpv warn] demux: Not seekable, but enabling seeking on user request.
+16:52:56.067 [mpv error] vd: Failed to allocate AVHWDeviceContext.
+16:52:56.072 [mpv error] ffmpeg: AVHWFramesContext: Could not create the surfaces
+16:52:56.072 [mpv error] ffmpeg: AVHWFramesContext: Error creating an internal frame pool
+16:52:56.078 [mpv] … 2 similar/decoder messages
+16:52:56.078 [mpv error] ffmpeg: AVHWDeviceContext: Cannot load nvcuda.dll
+16:52:56.078 [mpv error] ffmpeg: AVHWDeviceContext: Could not dynamically load CUDA
+16:52:56.108 [mpv] … 1 similar/decoder messages
+16:52:56.108 [mpv error] ao/wasapi: There are no playback devices available
+16:52:56.108 [mpv error] ao: Failed to initialize audio driver 'wasapi'
+16:52:56.108 [mpv error] cplayer: Could not open/initialize audio device -> no sound.
+16:53:10.284 open live http://127.0.0.1:8899/live/***/***/105.ts
+16:53:10.397 [mpv warn] playlist: Reading plaintext playlist.
+16:53:10.424 [mpv] … 168 similar/decoder messages
+16:53:10.424 [mpv warn] demux: Not seekable, but enabling seeking on user request.
+16:53:10.427 [mpv error] vd: Failed to allocate AVHWDeviceContext.
+16:53:10.430 [mpv error] ffmpeg: AVHWFramesContext: Could not create the surfaces
+16:53:10.430 [mpv error] ffmpeg: AVHWFramesContext: Error creating an internal frame pool
+16:53:10.438 [mpv] … 2 similar/decoder messages
+16:53:10.439 [mpv error] ffmpeg: AVHWDeviceContext: Cannot load nvcuda.dll
+16:53:10.439 [mpv error] ffmpeg: AVHWDeviceContext: Could not dynamically load CUDA
+16:53:10.507 [mpv] … 2 similar/decoder messages
+16:53:10.508 [mpv error] ao/wasapi: There are no playback devices available
+16:53:10.508 [mpv error] ao: Failed to initialize audio driver 'wasapi'
+16:53:10.508 [mpv error] cplayer: Could not open/initialize audio device -> no sound.
+16:53:25.275 open live http://127.0.0.1:8899/live/***/***/103.ts
+16:53:25.379 [mpv warn] playlist: Reading plaintext playlist.
+16:53:25.405 [mpv] … 16 similar/decoder messages
+16:53:25.405 [mpv warn] demux: Not seekable, but enabling seeking on user request.
+16:53:25.409 [mpv error] vd: Failed to allocate AVHWDeviceContext.
+16:53:25.428 [mpv error] ffmpeg: AVHWFramesContext: Could not create the surfaces
+16:53:25.428 [mpv error] ffmpeg: AVHWFramesContext: Error creating an internal frame pool
+16:53:25.428 [mpv] … 3 similar/decoder messages
+16:53:25.428 [mpv error] ffmpeg: AVHWDeviceContext: Cannot load nvcuda.dll
+16:53:25.428 [mpv error] ffmpeg: AVHWDeviceContext: Could not dynamically load CUDA
+16:53:25.438 [mpv] … 3 similar/decoder messages
+16:53:25.438 [mpv error] ao/wasapi: There are no playback devices available
+16:53:25.438 [mpv error] ao: Failed to initialize audio driver 'wasapi'
+16:53:25.438 [mpv error] cplayer: Could not open/initialize audio device -> no sound.
+16:53:26.510 interlaced video → deinterlace on
+16:53:26.554 [mpv fatal] lavfi: filter 'yadif' not found or failed to allocate
+16:53:26.554 [mpv error] dummy: Creating filter 'yadif' failed.
+16:53:37.534 open live http://127.0.0.1:8899/live/***/***/104.ts
+16:53:37.578 [mpv warn] playlist: Reading plaintext playlist.
+16:53:37.595 [mpv] … 44 similar/decoder messages
+16:53:37.595 [mpv warn] demux: Not seekable, but enabling seeking on user request.
+16:53:37.598 [mpv error] vd: Failed to allocate AVHWDeviceContext.
+16:53:37.627 [mpv error] ffmpeg: AVHWFramesContext: Could not create the surfaces
+16:53:37.627 [mpv error] ffmpeg: AVHWFramesContext: Error creating an internal frame pool
+16:53:37.627 [mpv] … 1 similar/decoder messages
+16:53:37.627 [mpv error] ffmpeg: AVHWDeviceContext: Cannot load nvcuda.dll
+16:53:37.627 [mpv error] ffmpeg: AVHWDeviceContext: Could not dynamically load CUDA
+16:53:37.627 [mpv fatal] lavfi: filter 'yadif' not found or failed to allocate
+16:53:37.627 [mpv error] dummy: Creating filter 'yadif' failed.
+16:53:37.627 [mpv error] ao/wasapi: There are no playback devices available
+16:53:37.627 [mpv error] ao: Failed to initialize audio driver 'wasapi'
+16:53:37.627 [mpv error] cplayer: Could not open/initialize audio device -> no sound.
+16:53:46.510 progressive video → deinterlace off
+16:53:57.267 plan OpenArchive on Orbit Sport 2
+16:53:57.267 open archive http://127.0.0.1:8899/timeshift/***/***/85/2026-10-19:16-30/104.ts skip=0s
+16:53:57.312 [mpv warn] playlist: Reading plaintext playlist.
+16:53:57.360 [mpv error] vd: Failed to allocate AVHWDeviceContext.
+16:53:57.364 [mpv error] ffmpeg: AVHWFramesContext: Could not create the surfaces
+16:53:57.364 [mpv error] ffmpeg: AVHWFramesContext: Error creating an internal frame pool
+16:53:57.369 [mpv] … 1 similar/decoder messages
+16:53:57.369 [mpv error] ffmpeg: AVHWDeviceContext: Cannot load nvcuda.dll
+16:53:57.369 [mpv error] ffmpeg: AVHWDeviceContext: Could not dynamically load CUDA
+16:53:57.386 [mpv error] ao/wasapi: There are no playback devices available
+16:53:57.387 [mpv error] ao: Failed to initialize audio driver 'wasapi'
+16:53:57.387 [mpv error] cplayer: Could not open/initialize audio device -> no sound.
+16:55:12.282 open vod http://127.0.0.1:8899/movie/***/***/501.ts
+16:55:12.320 [mpv warn] playlist: Reading plaintext playlist.
+16:55:12.430 [mpv error] vd: Failed to allocate AVHWDeviceContext.
+16:55:12.444 [mpv error] ffmpeg: AVHWFramesContext: Could not create the surfaces
+16:55:12.444 [mpv error] ffmpeg: AVHWFramesContext: Error creating an internal frame pool
+16:55:12.451 [mpv] … 1 similar/decoder messages
+16:55:12.452 [mpv error] ffmpeg: AVHWDeviceContext: Cannot load nvcuda.dll
+16:55:12.452 [mpv error] ffmpeg: AVHWDeviceContext: Could not dynamically load CUDA
+16:55:12.472 [mpv error] ao/wasapi: There are no playback devices available
+16:55:12.472 [mpv error] ao: Failed to initialize audio driver 'wasapi'
+16:55:12.472 [mpv error] cplayer: Could not open/initialize audio device -> no sound.

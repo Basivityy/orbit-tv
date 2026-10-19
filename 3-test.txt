@@ -1,0 +1,44 @@
+
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: ServerClock learns the offset from an EPG entry and builds the archive stamp
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: ServerClock server_info is ignored once the EPG taught the offset
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: ServerClock offset is rounded to 15 minutes (clock drift)
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: ServerClock archive stamp crosses midnight correctly
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: ServerClock parseWall accepts "T" and missing seconds
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: Xtream parsing base64 EPG text is decoded, plain text is kept
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: Xtream parsing programme from get_simple_data_table
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: Xtream parsing broken programme (end before start) is skipped
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: Xtream parsing channel from get_live_streams
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: Xtream parsing archive flag without days means no archive
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: Xtream parsing lenient number parsing
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: Player helpers mpv seekable ranges
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: Player helpers seek model clamps into the reachable part
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: Player helpers clock and duration formatting
+✅ D:/a/orbit-tv/orbit-tv/test/data_test.dart: Player helpers LRU evicts the least recently used entry
+✅ D:/a/orbit-tv/orbit-tv/test/epg_pictures_test.dart: EPG pictures picture keys from the panel JSON
+✅ D:/a/orbit-tv/orbit-tv/test/epg_pictures_test.dart: EPG pictures names and titles are normalised
+✅ D:/a/orbit-tv/orbit-tv/test/epg_pictures_test.dart: EPG pictures tolerant matching: exact start, same title, near start
+✅ D:/a/orbit-tv/orbit-tv/test/timeline_test.dart: Timeline.plan target at the live edge while live → stay live
+✅ D:/a/orbit-tv/orbit-tv/test/timeline_test.dart: Timeline.plan target in the future is treated as now
+✅ D:/a/orbit-tv/orbit-tv/test/timeline_test.dart: Timeline.plan target inside mpv cache → seek in the stream (no new connection)
+✅ D:/a/orbit-tv/orbit-tv/test/timeline_test.dart: Timeline.plan target outside the cache → archive opened at the whole minute plus an offset
+✅ D:/a/orbit-tv/orbit-tv/test/timeline_test.dart: Timeline.plan channel without archive cannot go back beyond the cache
+✅ D:/a/orbit-tv/orbit-tv/test/timeline_test.dart: Timeline.plan older than the archive window → not available
+✅ D:/a/orbit-tv/orbit-tv/test/timeline_test.dart: Timeline helpers archive length grows with the recording and is capped
+✅ D:/a/orbit-tv/orbit-tv/test/timeline_test.dart: Timeline helpers seek window is the programme when known
+✅ D:/a/orbit-tv/orbit-tv/test/timeline_test.dart: Timeline helpers seek window without EPG is a half-hour aligned hour
+✅ D:/a/orbit-tv/orbit-tv/test/timeline_test.dart: Timeline helpers earliest reachable moment
+✅ D:/a/orbit-tv/orbit-tv/test/timeline_test.dart: Timeline helpers cached() keeps a safety margin at the end of a range
+::group::✅ D:/a/orbit-tv/orbit-tv/test/epg_pictures_test.dart: EPG pictures downloads XMLTV (plain and gzip) and finds pictures
+16:47:54.082 xmltv http://127.0.0.1:49232/xmltv.php: 3 programme pictures, 2 channel names
+16:47:54.101 xmltv pictures: 3 programmes on 2 channels
+16:47:54.128 xmltv http://127.0.0.1:49232/epg.xml.gz: 3 programme pictures, 2 channel names
+16:47:54.128 xmltv pictures: 3 programmes on 2 channels
+16:47:56.179 xmltv http://127.0.0.1:1/none.xml: ClientException with SocketException: The remote computer refused the network connection.
+ (OS Error: The remote computer refused the network connection.
+, errno = 1225), address = 127.0.0.1, port = 49236, uri=http://127.0.0.1:1/none.xml
+16:47:56.194 xmltv http://127.0.0.1:49232/epg.xml.gz: 3 programme pictures, 2 channel names
+16:47:56.194 xmltv pictures: 3 programmes on 2 channels
+::endgroup::
+✅ D:/a/orbit-tv/orbit-tv/test/epg_pictures_test.dart: Platform messages Orbit Player licence answers are explained in Bosnian
+
+🎉 31 tests passed.
