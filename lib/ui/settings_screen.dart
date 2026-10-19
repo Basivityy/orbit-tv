@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -19,13 +20,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final s = AppServices.I;
   late final _platform = TextEditingController(text: s.prefs.settings.platformUrl);
   late final _store = TextEditingController(text: s.prefs.settings.store);
+  late final _epgImages = TextEditingController(text: s.prefs.settings.epgImagesUrl);
   bool _advanced = false;
 
   @override
+  void initState() {
+    super.initState();
+    s.icons.addListener(_iconsChanged);
+  }
+
+  void _iconsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    s.icons.removeListener(_iconsChanged);
     _platform.dispose();
     _store.dispose();
+    _epgImages.dispose();
     super.dispose();
+  }
+
+  String _picturesStatus() {
+    final ic = s.icons;
+    if (ic.loading) return 'Učitavam slike iz EPG-a…';
+    if (ic.count > 0) return '${ic.count} emisija sa slikom na ${ic.channels} kanala.';
+    if (ic.lastError != null) return 'EPG sa slikama trenutno nije dostupan (${ic.lastError}).';
+    if (ic.loadedAt != null) return 'EPG tvog panela nema slike za emisije. Možeš dodati izvor sa slikama pod "Napredno".';
+    return 'Slike se učitavaju nakon prijave.';
   }
 
   Future<void> _save() async {
@@ -150,6 +173,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }),
                 ),
               ]),
+              _section('Slike u TV vodiču', [
+                _row(
+                  'Slike emisija iz EPG-a',
+                  _picturesStatus(),
+                  OutlinedButton.icon(
+                    onPressed: s.signedIn && !s.icons.loading
+                        ? () async {
+                            final f = s.loadEpgPictures(force: true);
+                            setState(() {});
+                            await f;
+                          }
+                        : null,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Osvježi'),
+                  ),
+                ),
+              ]),
               _section('Pomoć', [
                 _row(
                   'Dnevnik rada (log)',
@@ -179,11 +219,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 12),
                   TextField(controller: _store, decoration: const InputDecoration(labelText: 'Prodavnica (opcionalno)', hintText: 'npr. main')),
                   const SizedBox(height: 12),
+                  TextField(
+                    controller: _epgImages,
+                    decoration: const InputDecoration(labelText: 'EPG izvor sa slikama (XMLTV link, opcionalno)', hintText: 'https://…/epg.xml ili .xml.gz — prazno = EPG iz panela'),
+                  ),
+                  const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: () async {
                       st.platformUrl = _platform.text.trim().isEmpty ? AppConfig.defaultPlatformUrl : _platform.text.trim();
                       st.store = _store.text.trim();
+                      final eu = _epgImages.text.trim();
+                      final epgChanged = eu != st.epgImagesUrl;
+                      st.epgImagesUrl = eu.startsWith('http://') || eu.startsWith('https://') ? eu : '';
+                      _epgImages.text = st.epgImagesUrl;
                       await _save();
+                      if (epgChanged) unawaited(s.loadEpgPictures(force: true));
                       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sačuvano.')));
                     },
                     child: const Text('Sačuvaj'),

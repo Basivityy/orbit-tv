@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -49,6 +50,124 @@ class AppServices extends ChangeNotifier {
 
   OrbitApi orbitApi() => OrbitApi(platformUrl: prefs.settings.platformUrl, store: prefs.settings.store);
 
+  /// Shown to the store next to the line ("Windows · DESKTOP-1A2B").
+  String deviceLabel() {
+    var host = '';
+    try {
+      host = Platform.localHostname;
+    } catch (_) {}
+    final label = host.isEmpty ? 'Windows PC' : 'Windows · $host';
+    return label.length > 60 ? label.substring(0, 60) : label;
+  }
+
+  /// EPG pictures: the panel's xmltv.php (and the optional source from Settings).
+  Future<void> loadEpgPictures({bool force = false}) async {
+    final a = _api;
+    if (a == null) return;
+    final extra = prefs.settings.epgImagesUrl;
+    if (force) {
+      await icons.load(a.xmltvUrl(), extraUrl: extra, force: true);
+    } else {
+      await icons.load(a.xmltvUrl(), extraUrl: extra);
+    }
+  }
+
+  bool _iconsHooked = false;
+  void _listenIcons() {
+    if (_iconsHooked) return;
+    _iconsHooked = true;
+    icons.addListener(_applyIcons);
+  }
+
+  /// Pictures arrived after programmes were loaded: attach them and refresh the tiles.
+  void _applyIcons() {
+    final epg = _epg, cat = _catalog, th = _thumbs;
+    if (epg == null || cat == null) return;
+    var n = 0;
+    for (final e in epg.loaded) {
+      final c = cat.channel(e.key);
+      if (c == null) continue;
+      for (final p in e.value) {
+        if (p.icon == null) {
+          final u = icons.iconFor(c, p);
+          if (u != null) {
+            p.icon = u;
+            n++;
+          }
+        }
+      }
+    }
+    th?.refreshUrls();
+    if (n > 0) epg.touch();
+  }
+
+  /// Platform answers that mean "this line may not use Orbit Player".
+  static const _denied = {'no_seats', 'player_inactive', 'not_licensed', 'unknown_code', 'unknown_device', 'device_limit'};
+
+  /// Answers after which the viewer has to sign in again (the others: try again later).
+  static const _signInAgain = {'not_licensed', 'unknown_code', 'unknown_device', 'device_limit'};
+
+  /// Platform could not be asked: fine for a few days after the last "yes".
+  XtreamException? _offlineVerdict(Account a, OrbitApiException e) {
+    if (prefs.licenseOkRecently(a)) return null;
+    return XtreamException('Ne mogu provjeriti Orbit Player licencu (${e.message}). Provjeri internet pa pokušaj ponovo.');
+  }
+
+  /// Username/password sign-in: the store must have an Orbit Player place for this line.
+  Future<void> _checkLicense(Account a, void Function(String)? progress) async {
+    progress?.call('Provjeravam Orbit Player…');
+    try {
+      await orbitApi().playerCheck(server: a.server, username: a.username, password: a.password, deviceId: prefs.deviceId, deviceName: deviceLabel());
+      await prefs.markLicenseOk(a);
+      Log.i('player check ok');
+    } on OrbitApiException catch (e) {
+      Log.i('player check: ${e.code ?? 'network'} ${e.message}');
+      if (e.transient) {
+        final v = _offlineVerdict(a, e);
+        if (v != null) throw v;
+        return; // platform unreachable for a moment
+      }
+      throw XtreamException(e.message, auth: _signInAgain.contains(e.code));
+    }
+  }
+
+  /// While the app runs: ask the platform again now and then (keeps the place, notices a stop).
+  Timer? _licenseTimer;
+  static const _licenseEvery = Duration(hours: 6);
+
+  void _startLicenseTimer() {
+    _licenseTimer?.cancel();
+    _licenseTimer = Timer.periodic(_licenseEvery, (_) => unawaited(_recheckLicense()));
+  }
+
+  Future<void> _recheckLicense() async {
+    final a = prefs.account;
+    if (a == null || !signedIn) return;
+    try {
+      if (a.loginCode != null) {
+        await orbitApi().status(a.loginCode!, prefs.deviceId);
+      } else {
+        await orbitApi().playerCheck(server: a.server, username: a.username, password: a.password, deviceId: prefs.deviceId, deviceName: deviceLabel());
+      }
+      await prefs.markLicenseOk(a);
+      Log.i('license recheck ok');
+    } on OrbitApiException catch (e) {
+      Log.i('license recheck: ${e.code ?? 'network'} ${e.message}');
+      String? reason;
+      if (e.transient) {
+        reason = _offlineVerdict(a, e)?.message;
+      } else if (_denied.contains(e.code)) {
+        reason = e.message;
+      }
+      if (reason != null && signedIn) {
+        signOutReason = reason;
+        await signOut(keepAccount: true);
+      }
+    } catch (e) {
+      Log.i('license recheck failed: $e');
+    }
+  }
+
   /// Archive frames (extra connection) only when the account allows a second connection,
   /// or when the user forced it on — and never while the main player needs the only one.
   bool get canGrabFrames {
@@ -65,7 +184,8 @@ class AppServices extends ChangeNotifier {
     progress?.call('Povezujem se sa serverom…');
     Log.i('sign in ${account.server}${account.loginCode != null ? ' (code)' : ''}');
     final api = XtreamClient(account);
-    final info = await api.authenticate();
+    final info = await api.authenticate(); // wrong password / expired line first
+    if (account.loginCode == null) await _checkLicense(account, progress);
     Log.i('account ${info.status}, max connections ${info.maxConnections}, server clock offset ${api.clock.offset.inMinutes} min');
     progress?.call('Učitavam kanale…');
     final catalog = Catalog(api);
@@ -86,15 +206,18 @@ class AppServices extends ChangeNotifier {
     await _engine!.init();
     await prefs.saveAccount(account);
     signOutReason = null;
+    _startLicenseTimer();
     notifyListeners();
     // Programme pictures from XMLTV in the background (optional).
-    unawaited(icons.load(api.xmltvUrl()));
+    _listenIcons();
+    unawaited(loadEpgPictures());
   }
 
   /// Signs in with an OrbitModul code (creates the line on first use).
   Future<void> signInWithCode(String code, {void Function(String)? progress}) async {
     progress?.call('Provjeravam kod…');
-    final r = await orbitApi().activateAndWait(code, prefs.deviceId, 'Windows PC', onProgress: progress);
+    final r = await orbitApi().activateAndWait(code, prefs.deviceId, deviceLabel(), onProgress: progress);
+    await prefs.markLicenseOk(r.account!);
     await signIn(r.account!, progress: progress);
   }
 
@@ -107,18 +230,24 @@ class AppServices extends ChangeNotifier {
       try {
         final r = await orbitApi().status(a.loginCode!, prefs.deviceId);
         if (r.account != null) account = r.account!;
+        await prefs.markLicenseOk(a);
         if (r.status == 'expired') throw XtreamException('Pretplata je istekla. Produži je novim kodom.', auth: true);
       } on OrbitApiException catch (e) {
-        if (e.code == 'unknown_code' || e.code == 'unknown_device' || e.code == 'device_limit') {
-          throw XtreamException(e.message, auth: true);
+        Log.i('code status: ${e.code ?? 'network'} ${e.message}');
+        if (_denied.contains(e.code)) throw XtreamException(e.message, auth: _signInAgain.contains(e.code));
+        if (e.transient) {
+          final v = _offlineVerdict(a, e);
+          if (v != null) throw v;
         }
-        // Platform unreachable: try the saved credentials.
+        // Platform unreachable for a moment: try the saved credentials.
       }
     }
     await signIn(account, progress: progress);
   }
 
   Future<void> signOut({bool keepAccount = false}) async {
+    _licenseTimer?.cancel();
+    _licenseTimer = null;
     final e = _engine;
     _engine = null;
     if (e != null) {

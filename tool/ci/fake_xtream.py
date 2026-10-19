@@ -1,8 +1,10 @@
 """Fake Xtream Codes / XUI.ONE server for CI end-to-end tests of Orbit TV.
 
 Serves player_api.php (channels, EPG, movies, series), live streams (paced at real time),
-timeshift (archive) streams, movie files with HTTP Range, xmltv.php and logos.
-Test media: test_progressive.ts (720p25) and test_interlaced.ts (576i25), made by ffmpeg in CI.
+timeshift (archive) streams, movie files with HTTP Range, xmltv.php with programme pictures,
+logos, and the OrbitModul App API check for Orbit Player (POST /api/app/v1/player/check).
+Test media: test_progressive.ts (720p25), test_interlaced.ts (576i25) and epg1..4.png, made by ffmpeg in CI.
+EPG pictures: channels 101-103 in xmltv.php (<icon> and XMLTV 1.1 <image>), 104 in the JSON EPG, 105 none.
 """
 import base64
 import json
@@ -41,6 +43,14 @@ def wall(ts):
     return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(ts + SERVER_TZ))
 
 
+def xmltv_time(ts):
+    return time.strftime("%Y%m%d%H%M%S", time.gmtime(ts + SERVER_TZ)) + " +0100"
+
+
+def epg_picture(stream_id, k):
+    return "http://127.0.0.1:%d/epgimg/%d.png" % (PORT, (k + stream_id) % 4 + 1)
+
+
 def programmes(stream_id, now):
     base = int(now // 1800) * 1800
     out = []
@@ -48,7 +58,8 @@ def programmes(stream_id, now):
         start = base + k * 1800
         end = start + 1800
         t = TITLES[(k + stream_id) % len(TITLES)]
-        out.append({
+        extra = {"image": epg_picture(stream_id, k)} if stream_id == 104 else {}
+        out.append({**extra,
             "id": str(stream_id * 1000 + k + 100),
             "epg_id": str(stream_id),
             "title": b64(t),
@@ -71,9 +82,9 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         sys.stderr.write("[fake] " + (fmt % args) + "\n")
 
-    def _json(self, obj):
+    def _json(self, obj, code=200):
         body = json.dumps(obj).encode("utf-8")
-        self.send_response(200)
+        self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
@@ -90,6 +101,10 @@ class H(BaseHTTPRequestHandler):
                 return self.xmltv()
             if p.startswith("/logo/"):
                 return self.file(LOGO, "image/png")
+            m = re.match(r"^/epgimg/(\d+)\.png$", p)
+            if m:
+                path = os.path.join(MEDIA, "epg%d.png" % ((int(m.group(1)) - 1) % 4 + 1))
+                return self.file(path if os.path.exists(path) else LOGO, "image/png")
             m = re.match(r"^/live/([^/]+)/([^/]+)/(\d+)\.(ts|m3u8)$", p)
             if m:
                 return self.live(int(m.group(3)))
@@ -103,6 +118,24 @@ class H(BaseHTTPRequestHandler):
             self.send_error(404)
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             pass
+
+    def do_POST(self):
+        """OrbitModul App API: Orbit Player licence check for username/password sign-ins."""
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+            body = json.loads(self.rfile.read(n) or b"{}")
+        except Exception:
+            body = {}
+        p = urllib.parse.urlparse(self.path).path
+        sys.stderr.write("[fake] POST %s client=%s user=%s\n" % (p, body.get("client"), body.get("username")))
+        if p == "/api/app/v1/player/check":
+            if body.get("client") != "orbit-player" or not body.get("deviceId"):
+                return self._json({"status": "error", "error": "invalid_request", "message": "bad request"}, 400)
+            if body.get("username") == USER and body.get("password") == PASS:
+                return self._json({"status": "active", "expiresAt": None, "store": {"name": "CI store", "extendUrl": None, "contact": None}})
+            return self._json({"status": "error", "error": "not_licensed",
+                               "message": "This line is not registered for Orbit Player."}, 404)
+        return self._json({"status": "error", "error": "not_found", "message": "not found"}, 404)
 
     def media_for(self, sid):
         for c in CHANNELS:
@@ -162,7 +195,23 @@ class H(BaseHTTPRequestHandler):
         return self._json([])
 
     def xmltv(self):
-        body = '<?xml version="1.0" encoding="UTF-8"?><tv></tv>'.encode()
+        now = time.time()
+        base = int(now // 1800) * 1800
+        parts = ['<?xml version="1.0" encoding="UTF-8"?>', '<tv generator-info-name="fake">']
+        for (sid, _n, name, _c, _a, _m) in CHANNELS:
+            parts.append('<channel id="orbit%d"><display-name>%s</display-name></channel>' % (sid, name))
+        for sid in (101, 102, 103):
+            for k in range(-16, 14):
+                start = base + k * 1800
+                t = TITLES[(k + sid) % len(TITLES)]
+                if sid == 102:
+                    pic = '<image type="backdrop" orient="L" size="3">%s</image>' % epg_picture(sid, k)
+                else:
+                    pic = '<icon src="%s" width="960" height="540"/>' % epg_picture(sid, k)
+                parts.append('<programme start="%s" stop="%s" channel="orbit%d"><title lang="bs">%s</title>%s</programme>'
+                             % (xmltv_time(start), xmltv_time(start + 1800), sid, t.replace("&", "&amp;"), pic))
+        parts.append('</tv>')
+        body = "\n".join(parts).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/xml")
         self.send_header("Content-Length", str(len(body)))

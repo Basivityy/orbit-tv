@@ -55,11 +55,24 @@ if (-not $app.HasExited) { $app.CloseMainWindow() | Out-Null; Start-Sleep -Secon
 if (-not $app.HasExited) { Stop-Process -Id $app.Id -Force }
 Start-Sleep -Seconds 2
 
-# Saved account → the app signs in by itself (same file shared_preferences uses).
+# The platform (fake) answers the Orbit Player licence check for username/password sign-ins.
 $prefsDir = Join-Path $env:APPDATA "Orbitex FZE LLC\Orbit Player"
 New-Item -ItemType Directory -Force $prefsDir | Out-Null
+$settings = '{"platformUrl":"http://127.0.0.1:8899"}'
+
+# A line that is not registered for Orbit Player → back to the sign-in screen with the reason.
+$account = '{"server":"http://127.0.0.1:8899","username":"nolicense","password":"x"}'
+@{ "flutter.account" = $account; "flutter.deviceId" = "win-ci-test"; "flutter.settings" = $settings } | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $prefsDir "shared_preferences.json")
+$script:app = Start-Process -FilePath $Exe -PassThru
+Start-Sleep -Seconds 15
+Shot "00c-not-licensed"
+if (-not $app.HasExited) { $app.CloseMainWindow() | Out-Null; Start-Sleep -Seconds 3 }
+if (-not $app.HasExited) { Stop-Process -Id $app.Id -Force }
+Start-Sleep -Seconds 2
+
+# Saved account → the app signs in by itself (same file shared_preferences uses).
 $account = '{"server":"http://127.0.0.1:8899","username":"ciuser","password":"cipass"}'
-@{ "flutter.account" = $account; "flutter.deviceId" = "win-ci-test" } | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $prefsDir "shared_preferences.json")
+@{ "flutter.account" = $account; "flutter.deviceId" = "win-ci-test"; "flutter.settings" = $settings } | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $prefsDir "shared_preferences.json")
 
 Write-Host "screen: $([System.Windows.Forms.Screen]::PrimaryScreen.Bounds)"
 $script:app = Start-Process -FilePath $Exe -PassThru -RedirectStandardOutput "ci-logs\app-stdout.txt" -RedirectStandardError "ci-logs\app-stderr.txt"

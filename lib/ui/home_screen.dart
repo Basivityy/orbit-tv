@@ -435,7 +435,7 @@ class _HeroPicture extends StatelessWidget {
     return ValueListenableBuilder(
       valueListenable: n,
       builder: (_, pic, __) {
-        final big = pic.large || (pic.bytes == null && (pic.url?.isNotEmpty ?? false));
+        final big = pic.large || (pic.url?.isNotEmpty ?? false);
         // Picture on the right ~3/4, its left edge melting into the background.
         final img = Align(
           alignment: Alignment.centerRight,

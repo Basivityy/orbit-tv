@@ -170,7 +170,26 @@ class Program {
       description: decodeMaybeBase64(asStr(j['description'])),
       hasArchiveFlag: asBool(j['has_archive']),
       serverStart: asStr(j['start']).isEmpty ? null : asStr(j['start']),
+      icon: pictureOf(j),
     );
+  }
+
+  /// Programme picture when the panel sends one with the EPG (keys differ between panels).
+  static String? pictureOf(Map<String, dynamic> j) {
+    for (final k in const ['image', 'icon', 'img', 'poster', 'thumbnail', 'thumb', 'picture', 'image_url', 'cover', 'banner']) {
+      final v = j[k];
+      String? u;
+      if (v is String) {
+        u = v.trim();
+      } else if (v is List && v.isNotEmpty) {
+        final first = v.first;
+        u = first is String ? first.trim() : first is Map ? asStr(first['url'] ?? first['src']).trim() : null;
+      } else if (v is Map) {
+        u = asStr(v['url'] ?? v['src']).trim();
+      }
+      if (u != null && (u.startsWith('http://') || u.startsWith('https://'))) return u;
+    }
+    return null;
   }
 }
 

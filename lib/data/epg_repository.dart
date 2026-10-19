@@ -24,6 +24,12 @@ class EpgRepository extends ChangeNotifier {
   void Function(Channel channel, List<Program> programs)? onLoaded;
 
   List<Program> programs(int channelId) => _programs[channelId] ?? const [];
+
+  /// Every channel whose programmes are loaded (channel id → programmes).
+  Iterable<MapEntry<int, List<Program>>> get loaded => _programs.entries;
+
+  /// Something about the programmes changed (e.g. pictures arrived): redraw.
+  void touch() => _changed();
   bool hasFull(int channelId) => _fullAt.containsKey(channelId);
 
   Program? at(int channelId, DateTime t) {

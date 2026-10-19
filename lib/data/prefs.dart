@@ -18,6 +18,7 @@ class AppSettings {
     this.store = AppConfig.defaultStore,
     this.skipSeconds = 10,
     this.deinterlace = true,
+    this.epgImagesUrl = '',
   });
 
   String liveFormat; // ts | m3u8
@@ -30,6 +31,8 @@ class AppSettings {
   String store;
   int skipSeconds;
   bool deinterlace;
+  /// Optional XMLTV link with programme pictures (when the panel's EPG export has none).
+  String epgImagesUrl;
 
   Map<String, dynamic> toJson() => {
         'liveFormat': liveFormat,
@@ -40,6 +43,7 @@ class AppSettings {
         'store': store,
         'skipSeconds': skipSeconds,
         'deinterlace': deinterlace,
+        'epgImagesUrl': epgImagesUrl,
       };
 
   static AppSettings fromJson(Map<String, dynamic>? j) {
@@ -54,6 +58,8 @@ class AppSettings {
     s.store = asStr(j['store']);
     s.skipSeconds = (asInt(j['skipSeconds']) ?? 10).clamp(5, 120);
     s.deinterlace = j['deinterlace'] is bool ? j['deinterlace'] as bool : true;
+    final eu = asStr(j['epgImagesUrl']).trim();
+    s.epgImagesUrl = eu.startsWith('http://') || eu.startsWith('https://') ? eu : '';
     return s;
   }
 }
@@ -203,6 +209,15 @@ class Prefs extends ChangeNotifier {
     }
     await _sp.setString('resume', jsonEncode(resume.values.map((e) => e.toJson()).toList()));
     notifyListeners();
+  }
+
+  /// Last time the platform said this username/password line may use Orbit Player
+  /// (lets the app start without internet to the platform for a few days).
+  String _licKey(Account a) => 'lic:${a.loginCode ?? '${a.server}|${a.username}'}';
+  Future<void> markLicenseOk(Account a) async => _sp.setInt(_licKey(a), DateTime.now().millisecondsSinceEpoch);
+  bool licenseOkRecently(Account a, {Duration within = const Duration(days: 7)}) {
+    final t = _sp.getInt(_licKey(a));
+    return t != null && DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(t)) < within;
   }
 
   List<ResumePoint> continueWatching() => resume.values.toList()..sort((a, b) => b.updated.compareTo(a.updated));

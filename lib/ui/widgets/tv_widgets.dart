@@ -47,10 +47,14 @@ class ProgramThumb extends StatelessWidget {
       valueListenable: n,
       builder: (_, pic, __) {
         Widget child;
-        if (pic.bytes != null) {
-          child = Image.memory(pic.bytes!, key: ValueKey(pic.bytes!.length), fit: fit, gaplessPlayback: true, filterQuality: FilterQuality.medium, width: double.infinity, height: double.infinity);
-        } else if (pic.url != null && pic.url!.isNotEmpty) {
-          child = NetImage(pic.url, fit: fit, cacheWidth: large ? 1280 : 480, placeholder: _fallback());
+        final frame = pic.bytes == null
+            ? null
+            : Image.memory(pic.bytes!, key: ValueKey(pic.bytes!.length), fit: fit, gaplessPlayback: true, filterQuality: FilterQuality.medium, width: double.infinity, height: double.infinity);
+        if (pic.url != null && pic.url!.isNotEmpty) {
+          // EPG picture from the panel; the frame (or logo) shows while it loads or if it fails.
+          child = NetImage(pic.url, key: ValueKey(pic.url), fit: fit, cacheWidth: large ? 1280 : 480, width: double.infinity, height: double.infinity, placeholder: frame ?? _fallback());
+        } else if (frame != null) {
+          child = frame;
         } else {
           child = _fallback();
         }

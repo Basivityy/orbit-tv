@@ -17,8 +17,9 @@ class ProgramPicture {
   bool get isEmpty => bytes == null && (url == null || url!.isEmpty);
 }
 
-/// Thumbnails for programmes: real frames first (saved while watching, or taken from the
-/// archive when allowed), then the EPG picture, then the channel logo (drawn by the widget).
+/// Thumbnails for programmes: the EPG picture first (from the panel / XMLTV), else a real
+/// frame (saved while watching, or taken from the archive when allowed), else the channel
+/// logo (drawn by the widget). No frames are grabbed for programmes that have an EPG picture.
 /// Small frames (320x180) are for cards and the guide; large ones (960x540) for hero banners.
 class ThumbService {
   ThumbService({required this.disk, required this.icons, required this.grabber, required this.api, required this.canGrab});
@@ -31,13 +32,20 @@ class ThumbService {
   final Map<String, ValueNotifier<ProgramPicture>> _watch = {};
   final Map<String, ValueNotifier<ProgramPicture>> _watchLarge = {};
   final Set<String> _requested = {};
+  final Map<String, (Channel, Program)> _meta = {}; // p.key → what the picture is for
+
+  String? _urlFor(Channel c, Program p) {
+    final u = p.icon ?? icons.iconFor(c, p);
+    return u == null || u.isEmpty ? null : u;
+  }
 
   static String largeKey(Program p) => 'L:${p.key}';
 
   ValueNotifier<ProgramPicture> watch(Channel c, Program p) {
     final key = p.key;
-    final n = _watch.putIfAbsent(key, () => ValueNotifier<ProgramPicture>(ProgramPicture(bytes: disk.peek(key), url: p.icon ?? icons.iconFor(c, p))));
-    if (n.value.bytes == null) _load(c, p, n, large: false);
+    _meta[key] = (c, p);
+    final n = _watch.putIfAbsent(key, () => ValueNotifier<ProgramPicture>(ProgramPicture(bytes: disk.peek(key), url: _urlFor(c, p))));
+    if (n.value.bytes == null && n.value.url == null) _load(c, p, n, large: false);
     return n;
   }
 
@@ -46,7 +54,7 @@ class ThumbService {
     final key = largeKey(p);
     final existing = _watchLarge[key];
     if (existing != null) {
-      if (!existing.value.large) _load(c, p, existing, large: true);
+      if (!existing.value.large && existing.value.url == null) _load(c, p, existing, large: true);
       return existing;
     }
     final small = watch(c, p);
@@ -60,7 +68,7 @@ class ThumbService {
       }
 
       small.addListener(mirror);
-      _load(c, p, n, large: true);
+      if (n.value.url == null) _load(c, p, n, large: true);
     }
     return n;
   }
@@ -74,6 +82,7 @@ class ThumbService {
       n.value = ProgramPicture(bytes: cached, url: n.value.url, large: large);
       return;
     }
+    if (n.value.url != null) return; // the EPG has a picture: no need to open the stream
     // Real frame: from the archive (a few minutes into the programme), or — for a programme
     // that has just started / a channel without archive — from the live stream right now.
     final now = DateTime.now().toUtc();
@@ -125,6 +134,22 @@ class ThumbService {
 
   bool hasThumb(Program p) => disk.has(p.key);
 
+  /// EPG pictures arrived later (XMLTV loaded): update pictures already on screen.
+  void refreshUrls() {
+    void update(ValueNotifier<ProgramPicture> n, (Channel, Program)? m) {
+      if (m == null) return;
+      final url = _urlFor(m.$1, m.$2);
+      if (url != null && url != n.value.url) n.value = ProgramPicture(bytes: n.value.bytes, url: url, large: n.value.large);
+    }
+
+    for (final e in _watch.entries) {
+      update(e.value, _meta[e.key]);
+    }
+    for (final e in _watchLarge.entries) {
+      update(e.value, _meta[e.key.substring(2)]);
+    }
+  }
+
   /// Forget notifiers nobody needs any more (called when leaving big lists).
   void trim() {
     if (_watch.length > 600) {
@@ -139,5 +164,6 @@ class ThumbService {
         _watchLarge.remove(k);
       }
     }
+    _meta.removeWhere((k, _) => !_watch.containsKey(k) && !_watchLarge.containsKey('L:$k'));
   }
 }

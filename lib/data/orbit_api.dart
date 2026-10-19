@@ -20,12 +20,47 @@ class OrbitApiException implements Exception {
   OrbitApiException(this.message, {this.code});
   final String message;
   final String? code;
+
+  /// No answer from the platform, or a temporary problem there (not a "no").
+  bool get transient => code == null || code!.isEmpty || code == 'server_error' || code == 'rate_limited';
+
   @override
   String toString() => message;
 }
 
-/// OrbitModul App API (POST /api/app/v1/activate | status | extend).
+/// Platform error codes → messages for the viewer (the platform answers in English).
+String platformMessage(String code, String fallback) {
+  switch (code) {
+    case 'no_seats':
+      return 'Tvoj prodavac trenutno nema slobodnih mjesta za Orbit Player. Javi mu se.';
+    case 'player_inactive':
+      return 'Orbit Player trenutno nije aktivan kod tvog prodavca. Javi mu se.';
+    case 'not_licensed':
+      return 'Ova linija nije registrovana za Orbit Player. Prijavi se kodom od prodavca ili mu se javi.';
+    case 'unknown_code':
+      return 'Ovaj kod ne postoji. Provjeri da li si ga dobro prepisao.';
+    case 'invalid_code':
+      return 'Upiši kod od 12 znakova, npr. A7K2-9QXM-4TPL.';
+    case 'device_limit':
+      return 'Ovaj kod se već koristi na najvećem broju uređaja. Javi se prodavcu da resetuje uređaje.';
+    case 'unknown_device':
+      return 'Na ovom uređaju se prvo prijavi kodom.';
+    case 'extension_code':
+      return 'Ovim kodom je produžena linija — prijavi se prvim kodom.';
+    case 'store_inactive':
+      return 'Prodavnica trenutno nije aktivna. Javi se prodavcu.';
+    case 'rate_limited':
+      return 'Previše pokušaja. Sačekaj par minuta pa probaj ponovo.';
+    default:
+      return fallback;
+  }
+}
+
+/// OrbitModul App API (POST /api/app/v1/activate | status | extend | player/check).
 class OrbitApi {
+  /// Tells the platform this is Orbit Player (user places of the store are checked).
+  static const clientName = 'orbit-player';
+
   OrbitApi({required this.platformUrl, this.store = '', http.Client? client}) : _http = client ?? http.Client();
   final String platformUrl;
   final String store;
@@ -43,7 +78,7 @@ class OrbitApi {
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
     try {
       final res = await _http
-          .post(_u(path), headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': AppConfig.userAgent}, body: jsonEncode({...body, if (store.isNotEmpty) 'store': store}))
+          .post(_u(path), headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': AppConfig.userAgent}, body: jsonEncode({...body, 'client': clientName, if (store.isNotEmpty) 'store': store}))
           .timeout(const Duration(seconds: 30));
       final text = utf8.decode(res.bodyBytes, allowMalformed: true);
       final j = jsonDecode(text);
@@ -63,7 +98,8 @@ class OrbitApi {
   CodeLogin _parse(Map<String, dynamic> j, String loginCode) {
     final status = asStr(j['status'], 'error');
     if (status == 'error') {
-      throw OrbitApiException(asStr(j['message'], 'Kod nije prihvaćen.'), code: asStr(j['error']));
+      final code = asStr(j['error'], 'error');
+      throw OrbitApiException(platformMessage(code, asStr(j['message'], 'Kod nije prihvaćen.')), code: code);
     }
     Account? acc;
     final server = asStr(j['server']);
@@ -96,6 +132,18 @@ class OrbitApi {
   /// Extends the same line with a new code.
   Future<CodeLogin> extend(String loginCode, String newCode, String deviceId) async {
     return _parse(await _post('extend', {'loginCode': loginCode, 'code': newCode.trim().toUpperCase(), 'deviceId': deviceId}), loginCode);
+  }
+
+  /// Signed in with server + username + password (no code): may this line use Orbit Player?
+  /// Returns "active" or "expired"; throws [OrbitApiException] with the platform's reason.
+  Future<String> playerCheck({required String server, required String username, required String password, required String deviceId, required String deviceName}) async {
+    final j = await _post('player/check', {'server': server, 'username': username, 'password': password, 'deviceId': deviceId, 'deviceName': deviceName});
+    final status = asStr(j['status'], 'error');
+    if (status == 'error') {
+      final code = asStr(j['error'], 'error');
+      throw OrbitApiException(platformMessage(code, asStr(j['message'], 'Prijava nije dozvoljena.')), code: code);
+    }
+    return status;
   }
 
   /// Signs in with [code], waiting while a brand-new line is being created.
