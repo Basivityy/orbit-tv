@@ -1,7 +1,7 @@
 /// Build-time settings of the Orbit Player app.
 class AppConfig {
   static const String appName = 'Orbit Player';
-  static const String version = '1.0.0';
+  static const String version = '1.1.0';
 
   /// OrbitModul platform used for "sign in with a code" (App API).
   /// Can be changed in Settings → Advanced (kept for other stores).

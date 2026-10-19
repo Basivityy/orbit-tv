@@ -74,19 +74,29 @@ class ThumbService {
       n.value = ProgramPicture(bytes: cached, url: n.value.url, large: large);
       return;
     }
-    // Real frame from the archive (past or running programme on an archive channel).
+    // Real frame: from the archive (a few minutes into the programme), or — for a programme
+    // that has just started / a channel without archive — from the live stream right now.
     final now = DateTime.now().toUtc();
-    if (!c.hasArchive || p.start.isAfter(now.subtract(const Duration(minutes: 3))) || !canGrab()) {
+    if (!canGrab()) {
       _requested.remove(key); // may become possible later
       return;
     }
-    final archiveStart = c.archiveStart(now);
-    if (archiveStart != null && p.start.isBefore(archiveStart)) return;
-    // A moment a few minutes in (skips intros/ads at the very start).
-    var at = p.start.add(Duration(seconds: (p.duration.inSeconds * 0.2).clamp(60, 480).round()));
-    final latest = now.subtract(const Duration(minutes: 2));
-    if (at.isAfter(latest)) at = latest;
-    final url = api().timeshiftUrl(c.id, at, const Duration(minutes: 2));
+    String url;
+    final fromArchive = c.hasArchive && !p.start.isAfter(now.subtract(const Duration(minutes: 3)));
+    if (fromArchive) {
+      final archiveStart = c.archiveStart(now);
+      if (archiveStart != null && p.start.isBefore(archiveStart)) return;
+      // A moment a few minutes in (skips intros/ads at the very start).
+      var at = p.start.add(Duration(seconds: (p.duration.inSeconds * 0.2).clamp(60, 480).round()));
+      final latest = now.subtract(const Duration(minutes: 2));
+      if (at.isAfter(latest)) at = latest;
+      url = api().timeshiftUrl(c.id, at, const Duration(minutes: 2));
+    } else if (p.isLiveAt(now)) {
+      url = api().liveUrl(c.id);
+    } else {
+      _requested.remove(key);
+      return;
+    }
     final img = await grabber.grab(url, large: large);
     if (img == null) {
       _requested.remove(key);
