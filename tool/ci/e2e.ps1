@@ -143,6 +143,15 @@ foreach ($k in $items.Keys) {
 Click-Rel 889 $menuY
 Start-Sleep -Seconds 3
 Shot "19-settings"
+# Scroll to "Slike u TV vodiču" (EPG pictures status).
+Focus-App
+$r = New-Object W+RECT
+[W]::GetWindowRect($script:app.MainWindowHandle, [ref]$r) | Out-Null
+[W]::SetCursorPos([int]($r.Left + 300), [int]($r.Top + 500)) | Out-Null
+Start-Sleep -Milliseconds 200
+for ($i = 0; $i -lt 8; $i++) { [W]::mouse_event(0x0800, 0, 0, -120, 0); Start-Sleep -Milliseconds 120 }
+Start-Sleep -Seconds 1
+Shot "19c-settings-pictures"
 Click-Rel 498 $menuY
 Start-Sleep -Seconds 3
 Click-Rel 640 560

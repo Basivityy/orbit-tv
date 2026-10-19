@@ -70,17 +70,31 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: |
-          if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) { choco install ffmpeg -y --no-progress | Out-Null }
-          New-Item -ItemType Directory -Force ci-media | Out-Null
-          ffmpeg -hide_banner -loglevel error -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 300 -c:v libx264 -preset veryfast -b:v 1500k -g 50 -pix_fmt yuv420p -c:a aac -b:a 96k -f mpegts ci-media\test_progressive.ts
-          ffmpeg -hide_banner -loglevel error -f lavfi -i "testsrc=size=720x576:rate=50" -f lavfi -i "sine=frequency=660:sample_rate=48000" -t 300 -vf "tinterlace=mode=interleave_top,setfield=tff" -c:v libx264 -preset veryfast -b:v 1200k -flags +ilme+ildct -x264-params "interlaced=1:tff=1" -g 50 -pix_fmt yuv420p -c:a aac -b:a 96k -f mpegts ci-media\test_interlaced.ts
-          Copy-Item installer\app_icon.png ci-media\logo.png
-          # EPG programme pictures served by the fake panel (xmltv.php / JSON EPG).
-          ffmpeg -hide_banner -loglevel error -f lavfi -i "mandelbrot=size=960x540" -frames:v 1 -y ci-media\epg1.png
-          ffmpeg -hide_banner -loglevel error -f lavfi -i "smptehdbars=size=960x540" -frames:v 1 -y ci-media\epg2.png
-          ffmpeg -hide_banner -loglevel error -f lavfi -i "cellauto=size=960x540:rule=110:random_fill_ratio=0.5" -frames:v 1 -y ci-media\epg3.png
-          ffmpeg -hide_banner -loglevel error -f lavfi -i "life=size=960x540:mold=10:ratio=0.3:life_color=#FFD400:death_color=#202020" -frames:v 1 -y ci-media\epg4.png
-          Get-ChildItem ci-media | Format-Table Name, Length
+          $ErrorActionPreference = 'Continue'
+          New-Item -ItemType Directory -Force ci-media, ci-logs | Out-Null
+          & {
+            Copy-Item installer\app_icon.png ci-media\logo.png
+            $ff = (Get-Command ffmpeg -ErrorAction SilentlyContinue).Source
+            if (-not $ff) {
+              choco install ffmpeg -y --no-progress 2>&1 | Select-Object -Last 3
+              $ff = (Get-Command ffmpeg -ErrorAction SilentlyContinue).Source
+              if (-not $ff -and (Test-Path C:\ProgramData\chocolatey\bin\ffmpeg.exe)) { $ff = 'C:\ProgramData\chocolatey\bin\ffmpeg.exe' }
+            }
+            if (-not $ff) {
+              # Static ffmpeg from PyPI as a fallback.
+              python -m pip install --quiet imageio-ffmpeg 2>&1 | Select-Object -Last 3
+              $ff = (python -c "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())").Trim()
+            }
+            Write-Host "ffmpeg: $ff"
+            & $ff -hide_banner -loglevel error -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi -i "sine=frequency=440:sample_rate=48000" -t 300 -c:v libx264 -preset veryfast -b:v 1500k -g 50 -pix_fmt yuv420p -c:a aac -b:a 96k -f mpegts -y ci-media\test_progressive.ts
+            & $ff -hide_banner -loglevel error -f lavfi -i "testsrc=size=720x576:rate=50" -f lavfi -i "sine=frequency=660:sample_rate=48000" -t 300 -vf "tinterlace=mode=interleave_top,setfield=tff" -c:v libx264 -preset veryfast -b:v 1200k -flags +ilme+ildct -x264-params "interlaced=1:tff=1" -g 50 -pix_fmt yuv420p -c:a aac -b:a 96k -f mpegts -y ci-media\test_interlaced.ts
+            # EPG programme pictures served by the fake panel (xmltv.php / JSON EPG).
+            & $ff -hide_banner -loglevel error -f lavfi -i "mandelbrot=size=960x540" -frames:v 1 -y ci-media\epg1.png
+            & $ff -hide_banner -loglevel error -f lavfi -i "smptehdbars=size=960x540" -frames:v 1 -y ci-media\epg2.png
+            & $ff -hide_banner -loglevel error -f lavfi -i "cellauto=size=960x540:rule=110:random_fill_ratio=0.5" -frames:v 1 -y ci-media\epg3.png
+            & $ff -hide_banner -loglevel error -f lavfi -i "testsrc2=size=960x540" -frames:v 1 -y ci-media\epg4.png
+            Get-ChildItem ci-media | Format-Table Name, Length
+          } *>&1 | Tee-Object -FilePath ci-logs\e2e-media.txt
 
       - name: E2E - run the app
         continue-on-error: true

@@ -19,6 +19,8 @@ ROOT = os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else "."
 MEDIA = sys.argv[1] if len(sys.argv) > 1 else "."
 PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 8899
 USER, PASS = "ciuser", "cipass"
+# Valid on the panel but not registered for Orbit Player on the platform.
+NOLIC_USER, NOLIC_PASS = "nolicense", "x"
 SERVER_TZ = 3600  # server wall clock = UTC+1 (tests the archive time stamp conversion)
 LOGO = None
 
@@ -144,14 +146,15 @@ class H(BaseHTTPRequestHandler):
         return os.path.join(MEDIA, "test_progressive.ts")
 
     def api(self, q):
-        if q.get("username") != USER or q.get("password") != PASS:
+        creds = (q.get("username"), q.get("password"))
+        if creds != (USER, PASS) and creds != (NOLIC_USER, NOLIC_PASS):
             return self._json({"user_info": {"auth": 0}})
         a = q.get("action")
         now = time.time()
         host = "http://127.0.0.1:%d" % PORT
         if not a:
             return self._json({
-                "user_info": {"username": USER, "password": PASS, "auth": 1, "status": "Active",
+                "user_info": {"username": creds[0], "password": creds[1], "auth": 1, "status": "Active",
                               "exp_date": str(int(now + 30 * 86400)), "is_trial": "0", "active_cons": "0",
                               "max_connections": "2", "allowed_output_formats": ["m3u8", "ts"]},
                 "server_info": {"url": "127.0.0.1", "port": str(PORT), "timezone": "Europe/Sarajevo",
