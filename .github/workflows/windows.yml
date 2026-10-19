@@ -140,9 +140,21 @@ jobs:
           git commit -q -m "CI logs run ${{ github.run_number }} (${{ job.status }})"
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-logs
 
-      - name: GitHub release (tags v*)
-        if: startsWith(github.ref, 'refs/tags/v')
+      # Release: a pushed tag v*, or a push to main whose commit message contains [release]
+      # (creates/updates the release v<pubspec version> with the installer and the portable zip).
+      - name: GitHub release
+        if: startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release]'))
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', env.APP_VERSION) }}
+          target_commitish: ${{ github.sha }}
+          name: Orbit TV ${{ env.APP_VERSION }} (Windows)
           files: dist/*
-          generate_release_notes: true
+          make_latest: true
+          body: |
+            **Orbit TV ${{ env.APP_VERSION }} za Windows**
+
+            - `OrbitTV-Setup-${{ env.APP_VERSION }}.exe` — instalacija (preporučeno)
+            - `OrbitTV-${{ env.APP_VERSION }}-portable.zip` — bez instalacije: raspakuj i pokreni `OrbitTV.exe`
+
+            Windows 10/11, 64-bit.
