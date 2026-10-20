@@ -1,0 +1,14 @@
+export function LogoMark({ className = "h-7 w-7" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#6366f1" />
+          <stop offset="1" stopColor="#22d3ee" />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="9" fill="url(#lg)" />
+      <path d="M18.2 5.5 8.6 18h6.1l-1.4 8.5L23.4 13.6h-6.2l1-8.1Z" fill="#fff" />
+    </svg>
+  );
+}
