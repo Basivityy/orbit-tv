@@ -49,6 +49,7 @@ export const utilityTools: ToolDefinition[] = [
   util({
     id: "password-entropy-calculator",
     name: "Password Strength & Entropy Calculator",
+    seoTitle: "Password Strength Checker & Entropy Calculator – Free",
     icon: "shield",
     summary: "Estimate password entropy in bits and offline crack time, and get warnings about patterns that make it weak.",
     intro:

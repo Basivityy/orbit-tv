@@ -3,7 +3,6 @@ import { createHash, randomBytes } from "node:crypto";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { hash, verify } from "@node-rs/argon2";
 import type { AdminUser, Role } from "@prisma/client";
 import { prisma } from "./db";
 import { IS_PROD } from "./env";
@@ -18,7 +17,6 @@ import { clientIp } from "./request";
  *   SameSite=Strict cookie is never sent on cross-site requests.
  */
 
-const ARGON_OPTS = { memoryCost: 19456, timeCost: 2, parallelism: 1, outputLen: 32, algorithm: 2 as const };
 export const SESSION_COOKIE = IS_PROD ? "__Host-to_admin" : "to_admin";
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const SESSION_RENEW_MS = 60 * 60 * 1000;
@@ -44,31 +42,7 @@ export function can(role: Role, perm: Permission): boolean {
   return ROLE_RANK[role] >= ROLE_RANK[PERMISSIONS[perm]];
 }
 
-export function validatePasswordStrength(pw: string): string | null {
-  if (pw.length < 12) return "Password must be at least 12 characters.";
-  if (pw.length > 256) return "Password is too long.";
-  const classes = [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter((r) => r.test(pw)).length;
-  if (classes < 3) return "Use at least three of: lowercase, uppercase, digits, symbols.";
-  return null;
-}
-
-export const hashPassword = (pw: string) => hash(pw, ARGON_OPTS);
-
-// Pre-computed hash used to keep timing similar when the user does not exist.
-let dummyHash: Promise<string> | null = null;
-
-export async function verifyPassword(stored: string | null, pw: string): Promise<boolean> {
-  if (!stored) {
-    dummyHash ??= hash("dummy-password-for-timing", ARGON_OPTS);
-    await verify(await dummyHash, pw).catch(() => false);
-    return false;
-  }
-  try {
-    return await verify(stored, pw);
-  } catch {
-    return false;
-  }
-}
+export { hashPassword, validatePasswordStrength, verifyPassword } from "./password";
 
 const tokenHash = (token: string) => createHash("sha256").update(token).digest("hex");
 

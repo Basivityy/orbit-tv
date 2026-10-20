@@ -1,0 +1,34 @@
+import { chromium } from "@playwright/test";
+const base = process.argv[2] || "http://localhost:3100";
+const shotDir = process.argv[3];
+const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
+const errs = [];
+p.on("pageerror", (e) => errs.push(e.message));
+await p.goto(base + "/admin");
+console.log("redirected to", p.url());
+await p.fill('input[name=email]', "admin@example.com");
+await p.fill('input[name=password]', "Test-Password-123!");
+await p.click('button[type=submit]');
+await p.waitForURL(base + "/admin");
+console.log("logged in:", await p.locator("h1").first().textContent());
+if (shotDir) await p.screenshot({ path: shotDir + "/admin-dash.png", fullPage: true });
+await p.goto(base + "/admin/tools/word-counter");
+await p.fill('input[name=title]', "Word Counter – Count Words Online Free | TestSite");
+await p.click('text=Save & publish SEO');
+await p.waitForSelector('text=field(s) updated', { timeout: 20000 });
+console.log("seo saved");
+if (shotDir) await p.screenshot({ path: shotDir + "/admin-tool.png", fullPage: true });
+const html = await (await fetch(base + "/tools/word-counter")).text();
+console.log("public title updated:", html.includes("Word Counter – Count Words Online Free | TestSite"));
+await p.goto(base + "/admin/seo/history");
+p.once("dialog", (d) => d.accept()); await p.click('button:has-text("Revert")');
+await p.waitForTimeout(3000);
+const html2 = await (await fetch(base + "/tools/word-counter")).text();
+console.log("reverted:", !html2.includes("TestSite"));
+for (const path of ["/admin/seo", "/admin/seo/bulk", "/admin/content", "/admin/content/categories", "/admin/content/pages/about", "/admin/ads", "/admin/redirects", "/admin/users", "/admin/audit", "/admin/errors", "/admin/account", "/admin/tools"]) {
+  const r = await p.goto(base + path);
+  console.log(path, r.status(), await p.locator("h1").first().textContent());
+}
+console.log("page errors:", errs);
+await b.close();
