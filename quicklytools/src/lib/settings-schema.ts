@@ -54,8 +54,9 @@ export const adsSchema = z.object({
   enabled: z.boolean(),
   publisherId: z
     .string()
-    .trim()
-    .regex(/^(ca-pub-\d{10,20})?$/, "Publisher ID looks like ca-pub-1234567890123456"),
+    // AdSense shows the ID as "pub-…" on the account page; the tag needs "ca-pub-…".
+    .transform((v) => v.replace(/\s+/g, "").replace(/^(?:ca-)?pub-/i, "ca-pub-"))
+    .pipe(z.string().regex(/^(ca-pub-\d{10,20})?$/, "Publisher ID looks like ca-pub-1234567890123456 (or pub-1234567890123456)")),
   slots: z.record(z.enum(AD_POSITIONS), z.object({ enabled: z.boolean(), slotId: z.string().trim().regex(/^\d{0,20}$/, "Ad unit IDs are numeric") })),
   disabledCategories: z.array(z.string()).max(20),
   disabledTools: z.array(z.string()).max(500),

@@ -44,6 +44,7 @@ export async function revalidateEverything() {
   revalidateTag(TAGS.catalog);
   revalidateTag(TAGS.pages);
   revalidatePath("/", "layout");
+  revalidatePath("/ads.txt");
   await purgeCloudflare({ purge_everything: true });
 }
 
