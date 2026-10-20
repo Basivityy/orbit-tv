@@ -38,5 +38,6 @@ See [LOAD-TESTING.md](LOAD-TESTING.md).
 ## Results recorded during development
 
 * Unit: 115/115 passing.
-* E2E (Chromium, against `next build` + standalone server): see the commit history / CI output. Firefox, WebKit, Edge and mobile projects were **not** executed in the development container (only Chromium is installed there) — run them in CI or locally before release.
+* E2E (Chromium, against `next build` + standalone server): 202/202 passing. Firefox, WebKit, Edge and mobile projects were **not** executed in the development container (only Chromium is installed there) — run them in CI or locally before release.
 * k6: scripts provided; **not executed at 1,000+ VUs** — capacity not yet confirmed.
+* Docker Compose stack (db → migrate → app → nginx with a self-signed cert) brought up locally: migrations applied, app healthcheck green, HTTP→HTTPS 301, nginx micro-cache `X-Cache: HIT`, `/api/internal/*` blocked (404) at the edge, admin created with `create-admin`, login + SEO edit through nginx reflected in the public SSR `<title>`. The `apt-get` layer of the Dockerfile could not be exercised in that sandbox (no Debian mirror access); build it once on the VPS.
