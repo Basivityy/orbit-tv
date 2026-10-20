@@ -7,7 +7,9 @@ import { Breadcrumbs } from "@/components/site/Breadcrumbs";
 import { PageViewTracker } from "@/components/site/LocalTools";
 
 export const revalidate = 3600;
-export const dynamicParams = false;
+// Unknown slugs 404 via notFound(). Keep dynamicParams on: with `false`, the
+// startup/admin cache refresh makes Next.js answer these pages with NoFallbackError (404).
+export const dynamicParams = true;
 
 export function generateStaticParams() {
   return STATIC_PAGE_SLUGS.map((page) => ({ page }));
