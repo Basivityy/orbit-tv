@@ -28,9 +28,12 @@ const ipv6Origin = (() => {
   }
 })();
 
+// React Refresh needs eval() in development only.
+const devEval = process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'";
+
 const publicCsp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: ${adsDomains}`,
+  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${devEval} blob: ${adsDomains}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
@@ -42,12 +45,12 @@ const publicCsp = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  "upgrade-insecure-requests",
+  ...(process.env.NODE_ENV === "production" ? ["upgrade-insecure-requests"] : []),
 ].join("; ");
 
 const adminCsp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${devEval}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
