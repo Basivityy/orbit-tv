@@ -79,6 +79,9 @@ const nextConfig: NextConfig = {
   // Separate build directories let a dev server and a production build coexist locally.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
+  // Always resolve metadata into <head> before streaming (no streamed metadata boundary).
+  // Every crawler sees complete tags, and ISR pages avoid a hydration mismatch.
+  htmlLimitedBots: /.*/,
   reactStrictMode: true,
   compress: true,
   serverExternalPackages: ["@node-rs/argon2", "sanitize-html"],

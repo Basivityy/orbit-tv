@@ -17,14 +17,14 @@ function read(key: string): string[] {
     return [];
   }
 }
-function write(key: string, ids: string[]) {
+function write(key: string, ids: string[], notify = true) {
   try {
     localStorage.setItem(key, JSON.stringify(ids));
   } catch {
     /* storage blocked */
   }
   cacheSnap.delete(key);
-  listeners.forEach((l) => l());
+  if (notify) listeners.forEach((l) => l());
 }
 const cacheSnap = new Map<string, string>();
 function useList(key: string): string[] {
@@ -45,7 +45,11 @@ function useList(key: string): string[] {
 }
 
 export function FavoriteButton({ id }: { id: string }) {
-  const favs = useList(FAV);
+  // Read storage only after mount so hydration always matches the server HTML.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const stored = useList(FAV);
+  const favs = mounted ? stored : [];
   const on = favs.includes(id);
   return (
     <button
@@ -63,7 +67,8 @@ export function FavoriteButton({ id }: { id: string }) {
 export function ToolVisit({ id }: { id: string }) {
   useEffect(() => {
     const prev = read(RECENT).filter((x) => x !== id);
-    write(RECENT, [id, ...prev].slice(0, 12));
+    // No listener notification: nothing on a tool page displays the recent list.
+    write(RECENT, [id, ...prev].slice(0, 12), false);
     try {
       navigator.sendBeacon?.("/api/track", new Blob([JSON.stringify({ kind: "view", key: id })], { type: "application/json" }));
     } catch {

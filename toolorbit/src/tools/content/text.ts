@@ -11,7 +11,7 @@ export const textTools: ToolDefinition[] = [
     popular: true,
     summary: "Count words, characters, sentences and paragraphs as you type, plus reading time and top keywords. Free and private.",
     intro:
-      "Writing an essay with a word limit, a product description or a blog post for SEO? Paste or type your text and the counts update instantly. Beyond words, you get characters with and without spaces, sentences, paragraphs, average word length, reading and speaking time, and the keywords you use most.\n\nWords are counted with the browser's language-aware word segmentation, so hyphenated words, contractions and non-Latin scripts are handled correctly.",
+      "Writing an essay with a word limit, a product description or a blog post for SEO? Paste or type your text and the counts update instantly. Beyond words, you get characters with and without spaces, sentences, paragraphs, average word length, reading and speaking time, and the keywords you use most.\n\nHyphenated words and contractions count as one word, as in common word processors, and languages written without spaces (Chinese, Japanese, Thai) are segmented with the browser's built-in dictionary.",
     steps: ["Type or paste your text into the box.", "Watch the statistics update live.", "Check the keyword list to spot overused words."],
     notes: ["Different tools count slightly differently — for example Microsoft Word counts “e-mail” as one word, as does this tool, but some counters treat URLs or numbers differently.", "Nothing you type is saved or sent anywhere."],
     faq: [
