@@ -442,7 +442,9 @@ function PassphraseGenerator() {
   useEffect(() => {
     void import("diceware-wordlist-en-eff").then((m) => setWords(Object.values(m.default as Record<string, string>)));
   }, []);
-  const gen = () => words && setPhrase(G.generatePassphrase(words, o));
+  const gen = () => {
+    if (words) setPhrase(G.generatePassphrase(words, o));
+  };
   useEffect(gen, [words, o]); // eslint-disable-line react-hooks/exhaustive-deps
   const bits = words ? o.count * Math.log2(words.length) : 0;
   return (
@@ -798,7 +800,7 @@ function MetaTagGenerator() {
       {tips.map((t) => <Notice key={t} tone="warn">{t}</Notice>)}
       <div>
         <span className="label">Google search preview (approximate)</span>
-        <SerpPreview title={m.title} description={m.description} url={m.canonical} />
+        <SerpPreview title={m.title} description={m.description} url={m.canonical ?? ""} />
       </div>
       <Panel title="HTML" actions={<CopyButton text={tags} />}>
         <pre className="font-mono text-xs break-all whitespace-pre-wrap">{tags}</pre>
