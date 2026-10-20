@@ -386,7 +386,7 @@ export const developerTools: ToolDefinition[] = [
     icon: "code",
     summary: "Decode named, decimal and hex HTML entities (&amp;, &#169;, &#x1F600;) back into readable characters.",
     intro:
-      "Turn &lt;p&gt; and &quot;quoted&quot; text from feeds, databases and scraped pages back into normal characters. The full HTML5 entity list (over 2,000 names) is supported, along with decimal and hexadecimal references.",
+      "Turn &lt;p&gt; and &quot;quoted&quot; text from feeds, databases and scraped pages back into normal characters. The full HTML5 entity list (over 2,000 names) is supported, along with decimal and hexadecimal references. It runs instantly in your browser, even for large documents.",
     steps: ["Paste text containing entities.", "Copy the decoded output."],
     notes: ["Decoded output may contain HTML tags; don't insert it into a page without escaping or sanitizing."],
     faq: [

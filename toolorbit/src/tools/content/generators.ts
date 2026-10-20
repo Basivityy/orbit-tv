@@ -78,7 +78,7 @@ export const generatorTools: ToolDefinition[] = [
     icon: "message",
     summary: "Create a QR code that opens a text message to your number with a pre-filled message — perfect for opt-ins and feedback.",
     intro:
-      "SMS QR codes power text-to-join campaigns, appointment confirmations and feedback requests. Scanning opens the messaging app with your number and the message already typed; the user just taps Send.",
+      "SMS QR codes power text-to-join campaigns, appointment confirmations and feedback requests. Scanning opens the messaging app with your number and the message already typed; the user just taps Send. The code works with the built-in camera apps on iPhone and Android.",
     steps: ["Enter the destination phone number.", "Add the pre-filled message.", "Download and test with both iPhone and Android."],
     notes: ["Uses the widely supported SMSTO: format.", "Messages with emoji or non-Latin characters count against a 70-character SMS segment.", QR_NOTE],
     faq: [
@@ -193,7 +193,7 @@ export const generatorTools: ToolDefinition[] = [
     icon: "shuffle",
     summary: "Pick one or more random winners from a list of names or items — fair, secure and with a little roll animation.",
     intro:
-      "Draw giveaway winners, choose who presents first or decide where to eat. Paste one entry per line, choose how many to pick, and get unique random selections from a cryptographically secure generator.",
+      "Draw giveaway winners, choose who presents first or decide where to eat. Paste one entry per line, choose how many to pick, and get unique random selections from a cryptographically secure generator. A short roll animation makes live draws more fun to watch.",
     steps: ["Enter items, one per line.", "Choose how many to pick.", "Click “Pick at random”."],
     notes: ["Duplicate lines count as separate entries (useful for weighted draws).", "Blank lines are ignored."],
     faq: [
@@ -209,7 +209,7 @@ export const generatorTools: ToolDefinition[] = [
     icon: "palette",
     summary: "Generate random colors and harmonious palettes (analogous, complementary, triadic, monochrome) with HEX and RGB codes.",
     intro:
-      "Find inspiration for designs, brand explorations and data visualizations. Generate fully random swatches, or base a palette on color-theory rules for combinations that look good together. Click to copy any HEX code.",
+      "Find inspiration for designs, brand explorations and data visualizations. Generate fully random swatches, or base a palette on color-theory rules for combinations that look good together. Click to copy any HEX code. Every swatch shows its RGB value too.",
     steps: ["Choose a palette type.", "Click Generate until you like the result.", "Copy individual colors or the whole palette."],
     notes: ["Check text contrast with the Color Converter before using colors for text."],
     faq: [
@@ -225,7 +225,7 @@ export const generatorTools: ToolDefinition[] = [
     icon: "blend",
     summary: "Design linear, radial and conic CSS gradients with up to 8 color stops and copy ready-to-use CSS.",
     intro:
-      "Build backgrounds and buttons with smooth gradients. Choose the gradient type and angle, add color stops and drag their positions while watching a live preview. Copy the background declaration straight into your stylesheet.",
+      "Build backgrounds and buttons with smooth gradients. Choose the gradient type and angle, add color stops and drag their positions while watching a live preview. Copy the background declaration straight into your stylesheet. The preview updates instantly as you edit.",
     steps: ["Choose linear, radial or conic.", "Set the angle and color stops.", "Copy the CSS."],
     notes: ["All modern browsers support these gradients without vendor prefixes.", "Conic gradients are ideal for pie-chart effects and color wheels."],
     faq: [
@@ -241,7 +241,7 @@ export const generatorTools: ToolDefinition[] = [
     icon: "layers",
     summary: "Create layered CSS box-shadows visually — offset, blur, spread, color, opacity and inset — and copy the code.",
     intro:
-      "Realistic shadows usually combine several layers: a tight, darker shadow for contact and a large, soft one for depth. Add up to five layers, tweak each with sliders and copy the combined box-shadow value.",
+      "Realistic shadows usually combine several layers: a tight, darker shadow for contact and a large, soft one for depth. Add up to five layers, tweak each with sliders and copy the combined box-shadow value. The preview updates live as you edit.",
     steps: ["Adjust the first layer's offset, blur, spread and opacity.", "Add more layers for depth.", "Copy the CSS."],
     notes: ["Large blur radii on many elements can slow down scrolling on low-end devices.", "Use negative spread to keep shadows from extending sideways."],
     faq: [
@@ -257,7 +257,7 @@ export const generatorTools: ToolDefinition[] = [
     icon: "square-dashed",
     summary: "Set rounded corners per corner in px, % or rem with a live preview and the shortest valid CSS.",
     intro:
-      "Round corners consistently across buttons, cards and images. Adjust all corners together or individually and copy the shortest equivalent CSS — the generator collapses values like 8px 8px 8px 8px to just 8px.",
+      "Round corners consistently across buttons, cards and images. Adjust all corners together or individually and copy the shortest equivalent CSS — the generator collapses values like 8px 8px 8px 8px to just 8px. Pixel, percent and rem units are supported.",
     steps: ["Choose a unit.", "Adjust corners (linked or individually).", "Copy the border-radius declaration."],
     notes: ["50% on a square makes a circle; 9999px makes pill-shaped buttons."],
     faq: [

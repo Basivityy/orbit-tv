@@ -160,7 +160,7 @@ export const pdfTools: ToolDefinition[] = [
     icon: "image",
     summary: "Render PDF pages to lossless PNG images at up to 300 DPI. Ideal for diagrams, slides and text-heavy pages.",
     intro:
-      "PNG keeps text edges and line art perfectly crisp, making it the best choice for converting slides, charts and technical drawings into images. Pages are rendered locally with PDF.js on a white background.",
+      "PNG keeps text edges and line art perfectly crisp, making it the best choice for converting slides, charts and technical drawings into images. Pages are rendered locally with PDF.js on a white background, so confidential documents never leave your device and the output matches what you see in Firefox's PDF viewer.",
     steps: ["Open a PDF.", "Choose resolution and optional page range.", "Download the PNG images (ZIP for multiple pages)."],
     notes: ["PNG files are larger than JPG for photographic pages.", "Higher DPI uses more memory; drop to 150 DPI if your device struggles."],
     faq: [
@@ -192,7 +192,7 @@ export const pdfTools: ToolDefinition[] = [
     icon: "ruler",
     summary: "See the size of every page in a PDF in points, millimetres and inches, with A4/Letter detection and rotation.",
     intro:
-      "Printers and publishers reject files with the wrong paper size. This checker lists every page's dimensions, identifies standard sizes such as A4, US Letter, Legal and A3, and flags documents that mix page sizes.",
+      "Printers and publishers reject files with the wrong paper size. This checker lists every page's dimensions, identifies standard sizes such as A4, US Letter, Legal and A3, and flags documents that mix page sizes — all without uploading the file.",
     steps: ["Drop a PDF.", "Review the table of page sizes.", "Look for “mixed page sizes” before sending to print."],
     notes: ["Sizes reflect the visible (rotated) page as viewers show it.", "PDF points are 1/72 inch."],
     faq: [
@@ -322,7 +322,7 @@ export const pdfTools: ToolDefinition[] = [
     icon: "file-text",
     summary: "Turn plain text into a clean, paginated PDF with your choice of font, size, margins and paper size.",
     intro:
-      "Convert notes, logs, code or drafts into a tidy PDF that anyone can open. Long lines wrap automatically, blank lines are preserved and pages break where they should.",
+      "Convert notes, logs, code or drafts into a tidy PDF that anyone can open. Long lines wrap automatically, blank lines are preserved and pages break where they should. Everything is generated in your browser, so private notes never touch a server.",
     steps: ["Paste or type your text.", "Choose font, paper size, font size and margins.", "Create and download the PDF."],
     notes: ["The standard PDF fonts cover Latin-1 characters (Western European languages). Emoji, Cyrillic, Greek and Asian scripts are replaced with “?” — you'll see a warning if that happens.", "Text is real, selectable text in the PDF."],
     faq: [

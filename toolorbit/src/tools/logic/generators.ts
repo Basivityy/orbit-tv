@@ -85,7 +85,10 @@ export function randomIntegers(min: number, max: number, count: number, unique: 
     const out: number[] = [];
     while (out.length < count) {
       const v = min + secureRandomInt(span);
-      if (!seen.has(v)) (seen.add(v), out.push(v));
+      if (!seen.has(v)) {
+        seen.add(v);
+        out.push(v);
+      }
     }
     return out;
   }

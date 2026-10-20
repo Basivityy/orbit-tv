@@ -101,7 +101,7 @@ function usePayload(build: () => string) {
     } catch (e) {
       return { payload: "", error: (e as Error).message };
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [build]);
 }
 
@@ -401,7 +401,7 @@ function PasswordGenerator() {
       setList([]);
     }
   };
-  useEffect(gen, [o, count]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(gen, [o, count]);  
   const bits = G.passwordPoolBits(o);
   return (
     <div className="space-y-4">
@@ -445,7 +445,7 @@ function PassphraseGenerator() {
   const gen = () => {
     if (words) setPhrase(G.generatePassphrase(words, o));
   };
-  useEffect(gen, [words, o]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(gen, [words, o]);  
   const bits = words ? o.count * Math.log2(words.length) : 0;
   return (
     <div className="space-y-4">
@@ -573,7 +573,7 @@ function RandomColor() {
     const base = C.randomColor(rnd);
     setColors(scheme === "random" ? Array.from({ length: 5 }, () => C.randomColor(rnd)) : C.palette(base, scheme));
   };
-  useEffect(gen, [scheme]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(gen, [scheme]);  
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">

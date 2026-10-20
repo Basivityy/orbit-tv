@@ -76,6 +76,8 @@ const commonSecurityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Separate build directories let a dev server and a production build coexist locally.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
   reactStrictMode: true,
   compress: true,
@@ -83,6 +85,16 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react"],
     serverActions: { bodySizeLimit: "1mb" },
+  },
+  webpack(config, { webpack }) {
+    // The multi-threaded AVIF encoder needs cross-origin isolation (SharedArrayBuffer),
+    // which AdSense pages cannot enable. Always bundle the single-threaded build.
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(/avif_enc_mt(\.js)?$/, (resource: { request: string }) => {
+        resource.request = resource.request.replace("avif_enc_mt", "avif_enc");
+      }),
+    );
+    return config;
   },
   async headers() {
     return [

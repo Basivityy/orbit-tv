@@ -26,14 +26,18 @@ export function graphemes(text: string): string[] {
   return Array.from(seg.segment(text), (s) => s.segment);
 }
 
+// Scripts written without spaces need dictionary-based segmentation.
+const NO_SPACE_SCRIPTS = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
+
+/** Counts words like word processors do: "well-known" and "it's" are one word each. */
 export function countWords(text: string): number {
-  const seg = segmenter("word");
+  const seg = NO_SPACE_SCRIPTS.test(text) ? segmenter("word") : null;
   if (seg) {
     let n = 0;
     for (const s of seg.segment(text)) if (s.isWordLike) n++;
     return n;
   }
-  const m = text.match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu);
+  const m = text.match(/[\p{L}\p{N}\p{M}]+(?:['’.\-_@][\p{L}\p{N}\p{M}]+)*/gu);
   return m ? m.length : 0;
 }
 
@@ -100,8 +104,9 @@ export function formatMinutes(minutes: number): string {
 export const toUpperCase = (t: string) => t.toUpperCase();
 export const toLowerCase = (t: string) => t.toLowerCase();
 
+// AP style: articles, coordinating conjunctions and prepositions of three letters or fewer.
 const SMALL_WORDS = new Set(
-  "a an and as at but by en for from if in into nor of on onto or per so the to up via vs with yet".split(" "),
+  "a an and as at but by en for if in nor of on or per so the to up via vs yet".split(" "),
 );
 
 /** Title case following common (AP/Chicago-like) rules: small words stay lowercase except first/last. */

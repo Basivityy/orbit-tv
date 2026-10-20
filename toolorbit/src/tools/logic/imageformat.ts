@@ -128,7 +128,10 @@ export function stripPngMetadata(bytes: Uint8Array): { output: Uint8Array; remov
   }
   const out = new Uint8Array(parts.reduce((s, p) => s + p.length, 0));
   let o = 0;
-  for (const p of parts) (out.set(p, o), (o += p.length));
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
   return { output: out, removed };
 }
 
@@ -243,7 +246,10 @@ export function setPngDpi(bytes: Uint8Array, dpi: number): Uint8Array {
   }
   const out = new Uint8Array(parts.reduce((s, p) => s + p.length, 0));
   let o = 0;
-  for (const p of parts) (out.set(p, o), (o += p.length));
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
   return out;
 }
 

@@ -100,8 +100,14 @@ export function SearchBox({ variant = "header" }: { variant?: "header" | "hero" 
         onFocus={() => (setOpen(true), ensure())}
         onChange={(e) => (setQ(e.target.value), setActive(0), setOpen(true))}
         onKeyDown={(e) => {
-          if (e.key === "ArrowDown") (e.preventDefault(), setActive((a) => Math.min(a + 1, results.length - 1)));
-          else if (e.key === "ArrowUp") (e.preventDefault(), setActive((a) => Math.max(a - 1, 0)));
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setActive((a) => Math.min(a + 1, results.length - 1));
+          }
+          else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setActive((a) => Math.max(a - 1, 0));
+          }
           else if (e.key === "Enter") {
             e.preventDefault();
             if (results[active]) go(results[active]);

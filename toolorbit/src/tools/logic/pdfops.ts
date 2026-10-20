@@ -2,7 +2,7 @@
  * PDF operations built on pdf-lib (@cantoo fork with encryption support).
  * Pure functions on bytes: they run in the browser and in Node (unit tests).
  */
-import { PDFDocument, StandardFonts, degrees, rgb, type PDFFont, type PDFPage } from "@cantoo/pdf-lib";
+import { PDFDict, PDFDocument, PDFName, StandardFonts, degrees, rgb, type PDFFont, type PDFPage } from "@cantoo/pdf-lib";
 
 export const MAX_PDF_MB = 200;
 
@@ -185,17 +185,20 @@ export async function writeMetadata(bytes: Uint8Array, m: { title: string; autho
   return save(doc);
 }
 
-/** Standard 14 fonts only cover WinAnsi (Latin-1-ish); replace other characters. */
-export function toWinAnsi(text: string, font: PDFFont): { text: string; replaced: number } {
+// Characters representable in WinAnsiEncoding (Windows-1252), used by the standard 14 PDF fonts.
+const CP1252_EXTRA = new Set("€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ");
+export function isWinAnsi(ch: string): boolean {
+  const c = ch.codePointAt(0)!;
+  return (c >= 0x20 && c <= 0x7e) || (c >= 0xa0 && c <= 0xff) || CP1252_EXTRA.has(ch);
+}
+
+/** Standard 14 fonts only cover WinAnsi (Western European); other characters become "?". */
+export function toWinAnsi(text: string, _font?: PDFFont): { text: string; replaced: number } {
   let replaced = 0;
-  const map: Record<string, string> = { "‘": "'", "’": "'", "“": '"', "”": '"', "–": "-", "—": "-", "…": "...", " ": " ", "\t": "    " };
   let out = "";
-  for (const ch of text) {
-    const c = map[ch] ?? ch;
-    try {
-      font.encodeText(c);
-      out += c;
-    } catch {
+  for (const ch of text.replace(/\t/g, "    ")) {
+    if (ch === "\n" || isWinAnsi(ch)) out += ch;
+    else {
       out += "?";
       replaced++;
     }
@@ -284,6 +287,11 @@ export async function isEncrypted(bytes: Uint8Array): Promise<boolean> {
 export async function unlockPdf(bytes: Uint8Array, password: string): Promise<Uint8Array> {
   if (!(await isEncrypted(bytes))) throw new Error("This PDF is not password-protected.");
   const doc = await loadPdf(bytes, password);
+  // The decrypted document still carries the orphaned encryption dictionary; drop it so
+  // viewers don't treat the saved copy as encrypted.
+  for (const [ref, obj] of doc.context.enumerateIndirectObjects()) {
+    if (obj instanceof PDFDict && obj.get(PDFName.of("Filter"))?.toString() === "/Standard" && obj.has(PDFName.of("O"))) doc.context.delete(ref);
+  }
   return save(doc);
 }
 

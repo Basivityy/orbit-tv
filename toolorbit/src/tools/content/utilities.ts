@@ -102,7 +102,7 @@ export const utilityTools: ToolDefinition[] = [
     icon: "ruler",
     summary: "Convert rem values to pixels for any root font size, with a reference table of common rem sizes.",
     intro:
-      "Reading a design system or Tailwind config in rem and need to know the pixel size? Multiply by the root font size. Enter a rem value and your root size to get pixels instantly.",
+      "Reading a design system or Tailwind config in rem and need to know the pixel size? Multiply by the root font size. Enter a rem value and your root size to get pixels instantly. A reference table lists the most common rem sizes.",
     steps: ["Enter the rem value.", "Adjust the root font size if needed.", "Copy the pixel value."],
     notes: ["The actual pixel size depends on the user's browser settings when your CSS respects them."],
     faq: [
@@ -166,7 +166,7 @@ export const utilityTools: ToolDefinition[] = [
     icon: "hash",
     summary: "Convert text to hexadecimal UTF-8 bytes with custom separators, uppercase and 0x prefix options.",
     intro:
-      "Developers inspect strings as hex to debug encodings, build byte arrays or escape data for protocols. Enter text to see its UTF-8 bytes in hexadecimal, formatted with spaces, colons, commas or no separator.",
+      "Developers inspect strings as hex to debug encodings, build byte arrays or escape data for protocols. Enter text to see its UTF-8 bytes in hexadecimal, formatted with spaces, colons, commas or no separator. Multi-byte characters are shown byte by byte.",
     steps: ["Type or paste text.", "Choose formatting.", "Copy the hex output."],
     notes: ["Non-ASCII characters produce multiple bytes (é = c3 a9)."],
     faq: [
@@ -182,7 +182,7 @@ export const utilityTools: ToolDefinition[] = [
     icon: "hash",
     summary: "Decode hexadecimal bytes to readable UTF-8 text. Accepts spaces, colons, commas and 0x prefixes.",
     intro:
-      "Turn hex dumps, packet captures and escaped byte strings back into readable text. Separators and 0x prefixes are stripped automatically; the result must be valid UTF-8 or you'll see a clear error.",
+      "Turn hex dumps, packet captures and escaped byte strings back into readable text. Separators and 0x prefixes are stripped automatically; the result must be valid UTF-8 or you'll see a clear error. Decoding runs entirely in your browser.",
     steps: ["Paste the hex bytes.", "Read the decoded text."],
     notes: ["An odd number of hex digits is reported as an error because bytes need two digits."],
     faq: [

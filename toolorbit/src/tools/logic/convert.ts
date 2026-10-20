@@ -185,7 +185,12 @@ const ROMAN: [number, string][] = [
 export function toRoman(n: number): string {
   if (!Number.isInteger(n) || n < 1 || n > 3999) throw new CalcError("Standard Roman numerals cover whole numbers from 1 to 3999.");
   let out = "";
-  for (const [v, s] of ROMAN) while (n >= v) (out += s), (n -= v);
+  for (const [v, s] of ROMAN) {
+    while (n >= v) {
+      out += s;
+      n -= v;
+    }
+  }
   return out;
 }
 
@@ -234,28 +239,28 @@ export function parseDateInput(s: string): Date {
   return d;
 }
 
-/** Calendar difference in years, months and days (a <= b). */
+function addMonthsClamped(d: Date, months: number): Date {
+  const y = d.getFullYear(), m = d.getMonth() + months;
+  const last = new Date(y, m + 1, 0).getDate();
+  return new Date(y, m, Math.min(d.getDate(), last));
+}
+
+/** Calendar difference in years, months and days (a <= b). Month-end dates clamp (Jan 31 + 1 month = Feb 28/29). */
 export function calendarDiff(a: Date, b: Date) {
   let sign = 1;
   if (a > b) {
     [a, b] = [b, a];
     sign = -1;
   }
-  let years = b.getFullYear() - a.getFullYear();
-  let months = b.getMonth() - a.getMonth();
-  let days = b.getDate() - a.getDate();
-  if (days < 0) {
-    months--;
-    days += new Date(b.getFullYear(), b.getMonth(), 0).getDate();
-  }
-  if (months < 0) {
-    years--;
-    months += 12;
-  }
-  const utcA = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
-  const utcB = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
-  const totalDays = Math.round((utcB - utcA) / 86400000);
-  return { years, months, days, totalDays, totalWeeks: totalDays / 7, sign };
+  const start = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+  const end = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+  let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+  if (addMonthsClamped(start, months) > end) months--;
+  const anchor = addMonthsClamped(start, months);
+  const dayMs = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const days = Math.round((dayMs(end) - dayMs(anchor)) / 86400000);
+  const totalDays = Math.round((dayMs(end) - dayMs(start)) / 86400000);
+  return { years: Math.floor(months / 12), months: months % 12, days, totalDays, totalWeeks: totalDays / 7, sign };
 }
 
 export function age(birth: Date, on: Date = new Date()) {

@@ -60,7 +60,7 @@ export const textTools: ToolDefinition[] = [
     icon: "align-left",
     summary: "Count paragraphs in any text and see sentences per paragraph. Paragraphs are separated by blank lines.",
     intro:
-      "Short paragraphs make web pages and emails easier to scan. Paste your text to count paragraphs and see the average number of sentences in each — a quick check for walls of text.",
+      "Short paragraphs make web pages and emails easier to scan. Paste your text to count paragraphs and see the average number of sentences in each — a quick check for walls of text. Everything runs locally, so drafts and confidential documents stay private.",
     steps: ["Paste your text with blank lines between paragraphs.", "Read the paragraph count and averages.", "Break up paragraphs averaging more than 4–5 sentences."],
     notes: ["Text copied from some editors uses single line breaks between paragraphs; add blank lines for accurate counting.", "Lines containing only spaces are treated as blank."],
     faq: [
@@ -76,7 +76,7 @@ export const textTools: ToolDefinition[] = [
     icon: "case-upper",
     summary: "Convert text to UPPERCASE instantly, including accented and international letters. Copy or download the result.",
     intro:
-      "Turn any text into capital letters for headings, labels, codes or emphasis. Conversion follows Unicode rules, so accented letters (é → É), German ß (→ SS) and other scripts convert correctly.",
+      "Turn any text into capital letters for headings, labels, codes or emphasis. Conversion follows Unicode rules, so accented letters (é → É), German ß (→ SS) and other scripts convert correctly. You can also download the result as a plain text file.",
     steps: ["Paste your text.", "The uppercase version appears instantly.", "Copy it or download as a .txt file."],
     notes: ["Writing whole sentences in capitals reads as shouting and is harder to read; use it sparingly."],
     faq: [
@@ -92,7 +92,7 @@ export const textTools: ToolDefinition[] = [
     icon: "case-sensitive",
     summary: "Convert text to lowercase in one step — fix accidental CAPS LOCK typing or normalize data. Unicode-aware.",
     intro:
-      "Accidentally typed a paragraph with CAPS LOCK on, or need to normalize email addresses and tags? Paste the text and get an all-lowercase version immediately.",
+      "Accidentally typed a paragraph with CAPS LOCK on, or need to normalize email addresses and tags? Paste the text and get an all-lowercase version immediately. It handles accented and international letters correctly, and the result can be reused for further conversions with one click.",
     steps: ["Paste your text.", "Copy the lowercase result.", "Use “Reuse” to run another transformation on the output."],
     notes: ["Lowercasing is language-neutral here; the Turkish dotted/dotless i follows default Unicode rules."],
     faq: [
@@ -141,7 +141,7 @@ export const textTools: ToolDefinition[] = [
     icon: "eraser",
     summary: "Strip blank and whitespace-only lines from text, code or lists. See how many lines were removed.",
     intro:
-      "Text pasted from PDFs, emails and web pages often comes with stray blank lines. Remove them all in one click, optionally treating lines that contain only spaces or tabs as empty too.",
+      "Text pasted from PDFs, emails and web pages often comes with stray blank lines. Remove them all in one click, optionally treating lines that contain only spaces or tabs as empty too. It also reports exactly how many lines were removed.",
     steps: ["Paste your text.", "Decide whether whitespace-only lines count as empty.", "Copy the compacted result."],
     notes: ["This removes all blank lines, including paragraph breaks. To keep single blank lines between paragraphs, use Remove Extra Spaces instead."],
     faq: [
@@ -189,7 +189,7 @@ export const textTools: ToolDefinition[] = [
     icon: "git-compare",
     summary: "Compare two texts and highlight added and removed words or lines side by side. Great for proofreading revisions.",
     intro:
-      "Spot exactly what changed between two versions of an article, contract clause or email. Word-level comparison highlights individual edits within sentences; line-level comparison is better for lists and code.",
+      "Spot exactly what changed between two versions of an article, contract clause or email. Word-level comparison highlights individual edits within sentences; line-level comparison is better for lists and code. Additions are highlighted in green and deletions in red, with a running count of each.",
     steps: ["Paste the original text on the left.", "Paste the changed text on the right.", "Review highlighted insertions (green) and deletions (red)."],
     notes: ["Comparison runs locally, so confidential drafts stay private.", "For code with line numbers and patch export, use the Diff Checker."],
     faq: [
@@ -285,7 +285,7 @@ export const textTools: ToolDefinition[] = [
     icon: "repeat",
     summary: "Repeat any text or emoji up to 100,000 times with new-line, space, comma or no separator.",
     intro:
-      "Generate repeated strings for testing input limits, filling templates or creating patterns. Choose the repeat count and separator; the output updates instantly.",
+      "Generate repeated strings for testing input limits, filling templates or creating patterns. Choose the repeat count and separator; the output updates instantly. It's handy for stress-testing form fields, generating sample data or building simple patterns, and the separator lets you control exactly how the copies are joined.",
     steps: ["Type the text to repeat.", "Set the count and separator.", "Copy the result."],
     notes: ["Output is capped at 2,000,000 characters to protect your browser from freezing.", "Please don't use repeated text to spam people or services."],
     faq: [

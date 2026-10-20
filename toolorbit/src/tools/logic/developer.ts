@@ -19,11 +19,91 @@ export function jsonErrorInfo(input: string, err: unknown): JsonErrorInfo {
   if (m) pos = Number(m[1]);
   const lc = message.match(/line (\d+) column (\d+)/i);
   if (lc) return { message, line: Number(lc[1]), column: Number(lc[2]) };
-  if (pos === undefined) return { message };
+  if (pos === undefined) {
+    const found = findJsonErrorOffset(input);
+    return found === null ? { message } : locate(input, found, message);
+  }
+  return locate(input, pos, message);
+}
+
+function locate(input: string, pos: number, message: string): JsonErrorInfo {
   const before = input.slice(0, pos);
   const line = before.split("\n").length;
   const column = pos - before.lastIndexOf("\n");
   return { message, line, column };
+}
+
+/**
+ * Locates the offset of the first syntax error with a tiny JSON scanner. Newer V8
+ * versions omit the position from some JSON.parse messages (e.g. trailing commas).
+ */
+export function findJsonErrorOffset(src: string): number | null {
+  let i = 0;
+  const ws = () => {
+    while (i < src.length && " \t\n\r".includes(src[i])) i++;
+  };
+  const fail = (): never => {
+    throw i;
+  };
+  const value = (): void => {
+    ws();
+    const c = src[i];
+    if (c === "{") {
+      i++;
+      ws();
+      if (src[i] === "}") return void i++;
+      for (;;) {
+        ws();
+        if (src[i] !== '"') fail();
+        str();
+        ws();
+        if (src[i] !== ":") fail();
+        i++;
+        value();
+        ws();
+        if (src[i] === ",") i++;
+        else if (src[i] === "}") return void i++;
+        else fail();
+      }
+    } else if (c === "[") {
+      i++;
+      ws();
+      if (src[i] === "]") return void i++;
+      for (;;) {
+        value();
+        ws();
+        if (src[i] === ",") i++;
+        else if (src[i] === "]") return void i++;
+        else fail();
+      }
+    } else if (c === '"') str();
+    else if (/[-0-9]/.test(c ?? "")) {
+      const m = src.slice(i).match(/^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?/);
+      if (!m) fail();
+      i += m![0].length;
+    } else if (src.startsWith("true", i)) i += 4;
+    else if (src.startsWith("false", i)) i += 5;
+    else if (src.startsWith("null", i)) i += 4;
+    else fail();
+  };
+  const str = () => {
+    i++;
+    while (i < src.length) {
+      const c = src[i];
+      if (c === '"') return void i++;
+      if (c === "\\") i += 2;
+      else if (c < " ") fail();
+      else i++;
+    }
+    fail();
+  };
+  try {
+    value();
+    ws();
+    return i < src.length ? i : null;
+  } catch (e) {
+    return typeof e === "number" ? Math.min(e, src.length) : null;
+  }
 }
 
 export function parseJson(input: string): unknown {
@@ -88,7 +168,10 @@ export function jsonToCsv(input: string, opts: { delimiter?: string; flattenNest
   const records = rows.map((r) => (opts.flattenNested === false && r && typeof r === "object" && !Array.isArray(r) ? r : flatten(r)));
   const columns: string[] = [];
   const seen = new Set<string>();
-  for (const r of records) for (const k of Object.keys(r as object)) if (!seen.has(k)) (seen.add(k), columns.push(k));
+  for (const r of records) for (const k of Object.keys(r as object)) if (!seen.has(k)) {
+        seen.add(k);
+        columns.push(k);
+      }
   const data = records.map((r) =>
     columns.map((c) => {
       const v = (r as Record<string, unknown>)[c];
@@ -151,7 +234,8 @@ export function csvRemoveDuplicates(
 // ---------- YAML ----------
 
 export function jsonToYaml(input: string, indent = 2): string {
-  return YAML.stringify(parseJson(input), { indent });
+  // YAML 1.1 output quotes strings such as "yes", "on" and "no" so older parsers keep them as strings.
+  return YAML.stringify(parseJson(input), { indent, version: "1.1" });
 }
 
 export function yamlToJson(input: string, indent = 2): string {
